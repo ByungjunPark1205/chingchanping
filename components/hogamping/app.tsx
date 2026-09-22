@@ -1,7 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from "./link";
 import {
   ArrowDown,
   ArrowRight,
@@ -63,7 +62,6 @@ export function Chingchanping({
   page: Page;
   userId?: string;
 }) {
-  const router = useRouter();
   const [viewer, setViewer] = useState<Viewer | null>(null);
   const [pings, setPings] = useState<Ping[]>([]);
   const [weeklyPings, setWeeklyPings] = useState<Ping[]>([]);
@@ -358,16 +356,17 @@ export function Chingchanping({
             칭찬핑
           </Link>
           <div className="topbar-actions">
-            <button
+            <Link
+              href="/received"
               className="icon-button"
               aria-label="받은 칭찬핑 확인"
-              onClick={() =>
-                viewer ? router.push("/received") : setAuth("login")
-              }
+              onClick={(event) => {
+                if (!viewer) { event.preventDefault(); setAuth("login"); }
+              }}
             >
               <Bell size={19} />
               {!!viewer?.unread && <i />}
-            </button>
+            </Link>
             {viewer ? (
               <Link className="top-profile" href="/profile">
                 <Avatar name={viewer.chatNickname} index={viewer.avatar} />
