@@ -66,7 +66,7 @@ export function SettingsView({
               />
             </label>
             <label>
-              롤 닉네임
+              게임 닉네임
               <input
                 name="lolNickname"
                 required

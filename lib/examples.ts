@@ -1,12 +1,8 @@
 import type { Member, Ping } from "./types";
-const names = [
-  ["곰고미", "GOMGOMI#KR1"],
-  ["소소", "soso#KR1"],
-  ["달빛산책", "Moon walk#0824"],
-  ["포로로", "PORORO#KR1"],
-  ["민트초코", "mint choco#0301"],
-  ["정글의온도", "warm jungle#KR1"],
-];
+const names = ["A", "B", "C", "D", "E", "F"].map((name) => [
+  name,
+  `PLAYER ${name}`,
+]);
 export const exampleMembers: Member[] = names.map(
   ([chatNickname, lolNickname], i) => ({
     id: `example-${i}`,

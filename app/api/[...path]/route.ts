@@ -85,7 +85,7 @@ async function post(req: Request) {
   if (path === "/auth/register") {
     await rateLimit(`register:${await ipKey(req)}`, 5, 3600000);
     const chat = clean(body.chatNickname, "톡방 닉네임", 24, 2);
-    const lol = clean(body.lolNickname, "롤 닉네임", 40, 2);
+    const lol = clean(body.lolNickname, "게임 닉네임", 40, 2);
     const pass = password(body.password);
     if (/[\r\n\t]/.test(chat + lol))
       fail(400, "닉네임에는 줄바꿈을 넣을 수 없어요.");
@@ -244,7 +244,7 @@ async function post(req: Request) {
       id,
     );
     if (!ping || ping.receiver_id !== user.id)
-      fail(403, "내가 받은 호감핑만 신고할 수 있어요.");
+      fail(403, "내가 받은 칭찬핑만 신고할 수 있어요.");
     const result = await run(
       "INSERT OR IGNORE INTO reports (id,compliment_id,reporter_id,reason,created_at,status) VALUES (?,?,?,?,?,'pending')",
       crypto.randomUUID(),
@@ -324,7 +324,7 @@ async function patch(req: Request) {
   const user = await requireUser(req);
   await rateLimit(`profile:${user.id}`, 20, 3600000);
   const chat = clean(body.chatNickname, "톡방 닉네임", 24, 2);
-  const lol = clean(body.lolNickname, "롤 닉네임", 40, 2);
+  const lol = clean(body.lolNickname, "게임 닉네임", 40, 2);
   if (/[\r\n\t]/.test(chat + lol))
     fail(400, "닉네임에는 줄바꿈을 넣을 수 없어요.");
   try {
@@ -348,7 +348,7 @@ async function handle(req: Request, fn: (r: Request) => Promise<Response>) {
   } catch (e) {
     if (e instanceof HttpError) return json({ error: e.message }, e.status);
     console.error(
-      "Hogamping request failed",
+      "Chingchanping request failed",
       e instanceof Error ? e.message : "Unknown error",
     );
     return json(

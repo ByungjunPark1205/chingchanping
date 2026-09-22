@@ -1,4 +1,4 @@
-import { Hogamping } from "@/components/hogamping/app";
+import { Chingchanping } from "@/components/hogamping/app";
 export default function NotFound() {
-  return <Hogamping page="notfound" />;
+  return <Chingchanping page="notfound" />;
 }

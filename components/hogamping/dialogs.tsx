@@ -1,11 +1,16 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Check, Flag, Heart, Loader2, LockKeyhole, Radio } from "lucide-react";
+import { Check, Flag, ThumbsUp, Loader2, LockKeyhole } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/client";
 import { categories, type Member, type Ping } from "@/lib/types";
-import { Avatar, PingMark } from "./visuals";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Avatar, PingMark, PingIcon } from "./visuals";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
@@ -39,7 +44,7 @@ export function AuthDialog({
       await onSuccess();
       toast.success(
         mode === "register"
-          ? "호감핑 탐지 준비 완료."
+          ? "칭찬핑 탐지 준비 완료."
           : "다시 만나서 반가워요!",
       );
     } catch (e) {
@@ -64,8 +69,8 @@ export function AuthDialog({
         </DialogTitle>
         <DialogDescription>
           {mode === "register"
-            ? "익숙한 닉네임으로, 새로운 마음을 만나보세요."
-            : "좋은 마음이 당신을 기다리고 있어요."}
+            ? "우리 커뮤니티에서 사용하는 닉네임으로 등록하세요."
+            : "우리 커뮤니티에 도착한 칭찬을 확인해보세요."}
         </DialogDescription>
         <form onSubmit={submit} key={mode}>
           <label>
@@ -80,12 +85,12 @@ export function AuthDialog({
           </label>
           {mode === "register" && (
             <label>
-              롤 닉네임
+              게임 닉네임
               <input
                 name="lolNickname"
                 required
                 maxLength={40}
-                placeholder="GOMGOMI#KR1"
+                placeholder="게임에서 사용하는 닉네임"
               />
             </label>
           )}
@@ -134,9 +139,9 @@ export function AuthDialog({
             {busy ? (
               <Loader2 size={18} className="spin" />
             ) : (
-              <Radio size={18} />
+              <PingIcon size={18} />
             )}{" "}
-            {mode === "register" ? "호감핑 등록하기" : "로그인하기"}
+            {mode === "register" ? "칭찬핑 등록하기" : "로그인하기"}
           </button>
         </form>
         <button
@@ -207,14 +212,14 @@ export function ComposeDialog({
               <PingMark animate />
               <Check size={23} />
             </div>
-            <DialogTitle className="center">호감핑 전송 완료!</DialogTitle>
+            <DialogTitle className="center">칭찬핑 전송 완료!</DialogTitle>
             <DialogDescription className="center">
-              {member?.chatNickname}님에게 호감핑을 보냈어요.
+              {member?.chatNickname}님에게 칭찬핑을 보냈어요.
               <br />
-              당신의 다정함이 잘 도착했습니다.
+              당신이 발견한 좋은 행동이 칭찬으로 전해졌어요.
             </DialogDescription>
             <button className="primary-button full" onClick={onClose}>
-              핑 찍었습니다. <Heart size={17} />
+              핑 찍었습니다. <ThumbsUp size={17} />
             </button>
           </>
         ) : (
@@ -225,17 +230,17 @@ export function ComposeDialog({
                 index={member?.avatar}
                 large
               />
-              <div className="eyebrow">A PING FROM THE HEART</div>
+              <div className="eyebrow">좋은 행동을 발견한 순간</div>
             </div>
             <DialogTitle>
-              {member?.chatNickname}님에게 호감핑 보내기
+              {member?.chatNickname}님에게 칭찬핑 보내기
             </DialogTitle>
             <DialogDescription>
               이 사람이 했던 좋은 행동을 남겨주세요.
             </DialogDescription>
             <form onSubmit={submit}>
               <div className="category-picker">
-                <p id="category-label">어떤 마음을 전할까요?</p>
+                <p id="category-label">어떤 점을 칭찬할까요?</p>
                 <RadioGroup
                   value={category}
                   onValueChange={setCategory}
@@ -270,7 +275,7 @@ export function ComposeDialog({
               <div className="textarea-footer">
                 <span>
                   <LockKeyhole size={12} />
-                  당신의 이름은 비밀이에요
+                  칭찬은 익명으로 전달돼요
                 </span>
                 <span>{message.length} / 300</span>
               </div>
@@ -286,9 +291,9 @@ export function ComposeDialog({
                 {phase === "sending" ? (
                   <PingMark animate />
                 ) : (
-                  <Radio size={18} />
+                  <PingIcon size={18} />
                 )}{" "}
-                {phase === "sending" ? "마음을 전하는 중…" : "호감핑 보내기"}
+                {phase === "sending" ? "칭찬을 전하는 중…" : "칭찬핑 보내기"}
               </button>
               <p className="form-hint">
                 한 사람에게 하루 3번 · 전체 하루 10번까지
@@ -323,7 +328,7 @@ export function ReportDialog({
       }}
     >
       <DialogContent className="hogam-dialog">
-        <DialogTitle>이 호감핑을 신고할까요?</DialogTitle>
+        <DialogTitle>이 칭찬핑을 신고할까요?</DialogTitle>
         <DialogDescription>
           불편했던 이유를 알려주세요. 운영자가 확인합니다.
         </DialogDescription>

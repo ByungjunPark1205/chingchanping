@@ -8,12 +8,11 @@ import {
   ChevronRight,
   CircleHelp,
   Compass,
-  Heart,
+  ThumbsUp,
   Home,
   List,
   LockKeyhole,
   LogOut,
-  Radio,
   Search,
   Settings,
   ShieldCheck,
@@ -38,7 +37,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
-import { PingMark, Avatar } from "./visuals";
+import { PingMark, PingIcon, Avatar } from "./visuals";
 import { PageHeading, Loading, Empty } from "./common";
 import { PingCard, PingCollection } from "./cards";
 import { AuthDialog, ComposeDialog, ReportDialog } from "./dialogs";
@@ -50,13 +49,19 @@ import { type Member, type Viewer, type Ping, type Page } from "@/lib/types";
 
 const nav = [
   { page: "home", href: "/", label: "홈", Icon: Home },
-  { page: "send", href: "/send", label: "호감핑 보내기", Icon: Radio },
-  { page: "received", href: "/received", label: "받은 호감핑", Icon: Heart },
+  { page: "send", href: "/send", label: "칭찬핑 보내기", Icon: PingIcon },
+  { page: "received", href: "/received", label: "받은 칭찬핑", Icon: ThumbsUp },
   { page: "profile", href: "/profile", label: "내 프로필", Icon: UserRound },
   { page: "settings", href: "/settings", label: "설정", Icon: Settings },
 ] as const;
 
-export function Hogamping({ page, userId }: { page: Page; userId?: string }) {
+export function Chingchanping({
+  page,
+  userId,
+}: {
+  page: Page;
+  userId?: string;
+}) {
   const [viewer, setViewer] = useState<Viewer | null>(null);
   const [pings, setPings] = useState<Ping[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -176,7 +181,7 @@ export function Hogamping({ page, userId }: { page: Page; userId?: string }) {
     register({
       name: "search_community_members",
       description:
-        "Search registered community members by chat or League of Legends nickname. Returns public profiles only.",
+        "Search registered community members by chat or in-game nickname. Returns public profiles only.",
       inputSchema: {
         type: "object",
         properties: { query: { type: "string", maxLength: 40 } },
@@ -252,7 +257,7 @@ export function Hogamping({ page, userId }: { page: Page; userId?: string }) {
           <Link href="/" className="brand">
             <PingMark />
             <span>
-              호감핑<small>HOGAMPING</small>
+              칭찬핑<small>CHINGCHANPING</small>
             </span>
           </Link>
         </SidebarHeader>
@@ -269,7 +274,7 @@ export function Hogamping({ page, userId }: { page: Page; userId?: string }) {
                 <Icon size={20} />
                 <span>{label}</span>
                 {p === "received" && !!viewer?.unread && (
-                  <span className="notification-dot" aria-label="새 호감핑" />
+                  <span className="notification-dot" aria-label="새 칭찬핑" />
                 )}
               </Link>
             ))}
@@ -277,21 +282,21 @@ export function Hogamping({ page, userId }: { page: Page; userId?: string }) {
           <div className="sidebar-note">
             <PingMark />
             <p>
-              작은 핑 하나,
+              좋은 행동을 발견하면,
               <br />
-              생각보다 큰 마음.
+              칭찬으로 알려주세요.
             </p>
             <span>
-              오늘 발견한 좋은 사람에게
+              함께해서 고마웠던 순간을
               <br />
-              마음을 살짝 남겨보세요.
+              구체적인 칭찬으로 남겨보세요.
             </span>
           </div>
         </SidebarContent>
         <SidebarFooter className="side-footer">
           <button onClick={() => setGuide(true)} className="guide-button">
             <CircleHelp size={17} />
-            호감핑 사용 가이드
+            칭찬핑 사용 가이드
             <ChevronRight size={14} />
           </button>
           {viewer?.role === "admin" && (
@@ -307,7 +312,7 @@ export function Hogamping({ page, userId }: { page: Page; userId?: string }) {
                 <Avatar name={viewer.chatNickname} index={viewer.avatar} />
                 <span>
                   {viewer.chatNickname}
-                  <small>호감핑 탐지 중</small>
+                  <small>칭찬핑 탐지 중</small>
                 </span>
               </Link>
               <button aria-label="로그아웃" onClick={logout}>
@@ -322,25 +327,23 @@ export function Hogamping({ page, userId }: { page: Page; userId?: string }) {
             </button>
           )}
           <div className="sidebar-bottom">
-            MADE OF GOOD VIBES <Heart size={11} />
+            GOOD ACTIONS DESERVE A PING <PingIcon size={12} />
           </div>
         </SidebarFooter>
       </Sidebar>
       <div className="main-wrap">
         <header className="topbar">
           <div className="topbar-context">
-            <span className="tiny-star">✦</span> 함께 만드는, 기분 좋은 한 판{" "}
-            <span className="topbar-divider" />
-            <span className="game-label">League of Legends</span>
+            <PingIcon size={18} /> 함께 만드는, 서로를 칭찬하는 커뮤니티
           </div>
           <Link className="mobile-brand" href="/">
             <PingMark />
-            호감핑
+            칭찬핑
           </Link>
           <div className="topbar-actions">
             <button
               className="icon-button"
-              aria-label="받은 호감핑 확인"
+              aria-label="받은 칭찬핑 확인"
               onClick={() =>
                 viewer ? location.assign("/received") : setAuth("login")
               }
@@ -391,7 +394,7 @@ export function Hogamping({ page, userId }: { page: Page; userId?: string }) {
                   ? "나에게 도착한 마음을 열어볼까요?"
                   : "우리 아지트에 들어오세요"}
               </h1>
-              <p>톡방 닉네임으로 로그인하고 호감핑을 이어가세요.</p>
+              <p>톡방 닉네임으로 로그인하고 칭찬핑을 이어가세요.</p>
               <button
                 className="primary-button"
                 onClick={() => setAuth("login")}
@@ -409,8 +412,8 @@ export function Hogamping({ page, userId }: { page: Page; userId?: string }) {
           {page === "received" && viewer && (
             <>
               <PageHeading
-                eyebrow="YOUR LITTLE MOMENTS"
-                title="내가 받은 호감핑"
+                eyebrow="함께한 순간, 고마웠던 행동"
+                title="내가 받은 칭찬핑"
                 description="누군가 당신의 좋은 행동을 발견했어요."
               />
               <div className="inbox-banner">
@@ -424,7 +427,7 @@ export function Hogamping({ page, userId }: { page: Page; userId?: string }) {
                 </p>
                 <strong>
                   {viewer.count}
-                  <Heart size={21} />
+                  <ThumbsUp size={21} />
                 </strong>
               </div>
               <PingCollection
@@ -455,13 +458,13 @@ export function Hogamping({ page, userId }: { page: Page; userId?: string }) {
                       </div>
                       <h1>{profile.chatNickname}</h1>
                       <p>
-                        League of Legends <span>{profile.lolNickname}</span>
+                        게임 닉네임 <span>{profile.lolNickname}</span>
                       </p>
                     </div>
                     <div className="profile-count">
-                      <Heart size={20} />
+                      <ThumbsUp size={20} />
                       <b>{profile.count}</b>
-                      <span>받은 호감핑</span>
+                      <span>받은 칭찬핑</span>
                     </div>
                   </div>
                   {viewer?.id !== profile.id ? (
@@ -469,7 +472,7 @@ export function Hogamping({ page, userId }: { page: Page; userId?: string }) {
                       className="primary-button profile-send"
                       onClick={() => compose(profile)}
                     >
-                      <Radio size={18} />이 사람에게 호감핑 보내기
+                      <PingIcon size={18} />이 사람에게 칭찬핑 보내기
                     </button>
                   ) : (
                     <Link
@@ -519,9 +522,9 @@ export function Hogamping({ page, userId }: { page: Page; userId?: string }) {
           )}
         </main>
         <footer className="main-footer">
-          <span>좋은 마음이 모여, 더 좋은 우리가 되도록.</span>
+          <span>좋은 행동을 알아보고, 서로를 더 존중하도록.</span>
           <span>
-            HOGAMPING <span className="footer-dot">·</span> 서로에게 다정한
+            CHINGCHANPING <span className="footer-dot">·</span> 서로에게 다정한
             플레이
           </span>
         </footer>
@@ -564,9 +567,9 @@ export function Hogamping({ page, userId }: { page: Page; userId?: string }) {
       <ReportDialog ping={report} onClose={() => setReport(null)} />
       <Dialog open={guide} onOpenChange={setGuide}>
         <DialogContent className="hogam-dialog">
-          <DialogTitle>호감핑, 이렇게 찍어요</DialogTitle>
+          <DialogTitle>칭찬핑, 이렇게 찍어요</DialogTitle>
           <DialogDescription>
-            좋은 행동을 발견했다면, 그 마음을 알려주세요.
+            좋은 행동을 발견했다면, 구체적인 칭찬으로 알려주세요.
           </DialogDescription>
           <div className="guide-steps">
             <p>
@@ -634,22 +637,35 @@ function HomeBoard({
       : source;
   return (
     <>
+      <figure className="community-quote">
+        <span className="quote-glyph" aria-hidden="true">
+          “
+        </span>
+        <div>
+          <blockquote>
+            <p>남을 찬양하면 자신에게 돌아온다.</p>
+            <p>사람이란 자신을 칭찬하는 사람을 칭찬하고 싶어한다.</p>
+          </blockquote>
+          <figcaption>
+            — 괴테 <span>(독일 시인)</span>
+          </figcaption>
+        </div>
+      </figure>
       <PageHeading
-        eyebrow="A LITTLE PING. A LOT OF HEART."
-        title="오늘도, 호감핑"
-        description="좋은 행동을 발견했다면, 호감핑을 찍어주세요."
+        title="오늘도, 칭찬핑"
+        description="좋은 행동을 발견했다면, 칭찬핑을 찍어주세요."
       >
         <Link className="primary-button" href="/send">
-          <Radio size={19} />
-          호감핑 보내기
+          <PingIcon size={19} />
+          칭찬핑 보내기
           <ArrowRight size={17} />
         </Link>
       </PageHeading>
-      <section className="board-section" aria-label="호감핑 보드">
+      <section className="board-section" aria-label="칭찬핑 보드">
         <div className="board-toolbar">
           <div className="board-title">
             <span className="live-dot" />
-            <h2>우리 사이에 도착한 호감핑</h2>
+            <h2>우리 커뮤니티에 도착한 칭찬핑</h2>
             <span className="board-total">{stats.pings}</span>
           </div>
           <div className="board-controls">
@@ -686,7 +702,7 @@ function HomeBoard({
         {isExample && (
           <div className="example-label">
             <Sparkles size={13} />
-            <span>첫 호감핑을 기다리는 중이에요. 아래는 칭찬 예시입니다.</span>
+            <span>첫 칭찬핑을 기다리는 중이에요. 아래는 칭찬 예시입니다.</span>
           </div>
         )}
         <div
@@ -701,7 +717,7 @@ function HomeBoard({
               <div className="map-cross horizontal" />
               <div className="map-center">
                 <PingMark />
-                <span>GOOD VIBES ONLY</span>
+                <span>좋은 행동, 칭찬으로 남기다</span>
               </div>
               <span className="map-plus plus-one">+</span>
               <span className="map-plus plus-two">+</span>
@@ -716,10 +732,10 @@ function HomeBoard({
             <Empty
               title={
                 filter === "today"
-                  ? "오늘의 첫 호감핑을 찍어볼까요?"
+                  ? "오늘의 첫 칭찬핑을 찍어볼까요?"
                   : undefined
               }
-              text="고마웠던 한 사람에게 마음을 전해보세요."
+              text="고마웠던 한 사람에게 칭찬을 남겨보세요."
             >
               <Link className="secondary-button" href="/send">
                 사람 찾으러 가기 <ArrowRight size={16} />
@@ -746,17 +762,17 @@ function HomeBoard({
         </div>
         {mode === "list" && filtered.length > limit && (
           <button className="load-more" onClick={() => setLimit((l) => l + 12)}>
-            호감핑 더 보기 <ArrowDown size={16} />
+            칭찬핑 더 보기 <ArrowDown size={16} />
           </button>
         )}
         <div className="board-legend">
           <span>
             <span className="live-dot" />
-            좋은 마음이 닿는 순간, 핑이 켜져요.
+            좋은 행동이 발견된 순간, 핑이 켜져요.
           </span>
           <span>
             <LockKeyhole size={13} />
-            보내는 마음은 익명으로
+            보내는 칭찬은 익명으로
           </span>
         </div>
       </section>
@@ -780,7 +796,7 @@ function HomeBoard({
         <button className="home-guide" onClick={onGuide}>
           <div>
             <span>처음 오셨나요?</span>
-            <b>호감핑은 이렇게 찍어요</b>
+            <b>칭찬핑은 이렇게 찍어요</b>
           </div>
           <span className="round-arrow">
             <ArrowRight size={19} />
@@ -814,15 +830,15 @@ function MemberDirectory({
   return (
     <>
       <PageHeading
-        eyebrow="FIND YOUR GOOD TEAMMATE"
+        eyebrow="함께하는 사람의 좋은 점을 발견해요"
         title="누구에게 핑을 찍을까요?"
         description="오늘 함께해서 고마웠던 사람을 찾아보세요."
       />
       <div className="search-box">
         <Search size={21} />
         <input
-          aria-label="톡방 닉네임 또는 롤 닉네임 검색"
-          placeholder="톡방 닉네임이나 롤 닉네임으로 찾아보세요"
+          aria-label="톡방 닉네임 또는 게임 닉네임 검색"
+          placeholder="톡방 닉네임이나 게임 닉네임으로 찾아보세요"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -867,15 +883,15 @@ function MemberDirectory({
                   <p>{m.lolNickname}</p>
                 </Link>
                 <div className="member-count">
-                  <Heart size={14} />
-                  받은 호감핑 <b>{m.count}</b>
+                  <ThumbsUp size={14} />
+                  받은 칭찬핑 <b>{m.count}</b>
                 </div>
                 <button
                   className="secondary-button full"
                   onClick={() => compose(m)}
                 >
-                  <Radio size={17} />
-                  호감핑 보내기
+                  <PingIcon size={17} />
+                  칭찬핑 보내기
                 </button>
               </article>
             ))}

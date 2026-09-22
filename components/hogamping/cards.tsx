@@ -1,10 +1,10 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowDown, Flag, Heart, Radio } from "lucide-react";
+import { ArrowDown, Flag, ThumbsUp } from "lucide-react";
 import { time } from "@/lib/format";
 import type { Ping } from "@/lib/types";
-import { Avatar } from "./visuals";
+import { Avatar, PingMark, PingIcon } from "./visuals";
 import { Empty, Loading } from "./common";
 
 export function PingCard({
@@ -26,7 +26,7 @@ export function PingCard({
     >
       <div className="card-top">
         <span className="card-category">
-          <Heart size={12} />
+          <ThumbsUp size={12} />
           {ping.category}
         </span>
         <span className="card-time">
@@ -57,7 +57,7 @@ export function PingCard({
           </Link>
         )}
         <span className="card-ping">
-          <Radio size={13} /> 호감핑 +1
+          <PingIcon size={15} /> 칭찬핑 +1
         </span>
       </div>
       {onReport && (
@@ -66,9 +66,7 @@ export function PingCard({
           신고
         </button>
       )}
-      <span className="card-marker" aria-hidden="true">
-        <span />
-      </span>
+      <PingMark className="card-marker" />
     </article>
   );
 }
@@ -99,7 +97,7 @@ export function PingCollection({
       </div>
       {pings.length > limit && (
         <button className="load-more" onClick={() => setLimit((v) => v + 12)}>
-          호감핑 더 보기 <ArrowDown size={16} />
+          칭찬핑 더 보기 <ArrowDown size={16} />
         </button>
       )}
     </>

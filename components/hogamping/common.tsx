@@ -9,7 +9,7 @@ export function PageHeading({
   description,
   children,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   description: string;
   children?: React.ReactNode;
@@ -17,7 +17,7 @@ export function PageHeading({
   return (
     <div className="page-heading">
       <div>
-        <div className="eyebrow">{eyebrow}</div>
+        {eyebrow && <div className="eyebrow">{eyebrow}</div>}
         <h1>{title}</h1>
         <p>{description}</p>
       </div>
@@ -29,12 +29,12 @@ export function Loading() {
   return (
     <div className="loading-state" role="status">
       <Loader2 className="spin" size={23} />
-      호감핑을 탐지하고 있어요.
+      칭찬핑을 탐지하고 있어요.
     </div>
   );
 }
 export function Empty({
-  title = "아직 탐지된 호감핑이 없습니다.",
+  title = "아직 탐지된 칭찬핑이 없습니다.",
   text = "함께할 좋은 순간들이 차곡차곡 쌓이고 있어요.",
   children,
 }: {

@@ -1,4 +1,4 @@
-import { Hogamping } from "@/components/hogamping/app";
+import { Chingchanping } from "@/components/hogamping/app";
 export default function Page() {
-  return <Hogamping page="received" />;
+  return <Chingchanping page="received" />;
 }
