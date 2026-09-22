@@ -14,6 +14,7 @@
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
     "test:api": "node scripts/verify-api.mjs",
+    "test:feed": "node scripts/verify-feed.mjs",
     "test:limits": "node scripts/verify-limits.mjs",
     "test:cleanup": "node scripts/reset-local-tests.mjs",
     "typecheck": "tsc --noEmit"

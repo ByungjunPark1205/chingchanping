@@ -1682,6 +1682,8 @@ textarea {
     scroll-behavior: auto !important;
   }
 }
+
+
 @media (min-width: 1600px) {
   .space-board .board-card {
     width: 29%;
@@ -2752,42 +2754,20 @@ textarea {
   border-color: #745044;
 }
 .community-quote {
-  display: flex;
-  gap: 17px;
-  margin: 0 0 28px;
-  padding: 19px 24px 20px;
-  border-left: 2px solid #be9749;
-  background: linear-gradient(100deg, #292920, #20221d80 65%, transparent);
-  border-radius: 0 12px 12px 0;
-}
-.quote-glyph {
-  color: #c6a253;
-  font-family: Georgia, serif;
-  font-size: 62px;
-  line-height: 1;
-  height: 35px;
-  margin-top: 2px;
+  margin: 0 0 22px;
+  padding: 0;
 }
 .community-quote blockquote {
   margin: 0;
-  font-size: clamp(16px, 1.4vw, 20px);
-  line-height: 1.8;
-  letter-spacing: -0.4px;
-  word-break: keep-all;
-  color: #e2ddcd;
-}
-.community-quote blockquote p:first-child {
-  color: #e4c67c;
-  font-weight: 600;
-}
-.community-quote figcaption {
-  color: #b8ad90;
   font-size: 13px;
-  margin-top: 9px;
+  line-height: 1.8;
+  letter-spacing: -0.2px;
+  word-break: keep-all;
+  color: #aaa795;
 }
-.community-quote figcaption span {
-  color: #929082;
-  margin-left: 4px;
+.community-quote cite {
+  font-style: normal;
+  color: #939181;
 }
 .page-home > .page-heading {
   margin-bottom: 26px;
@@ -2821,25 +2801,11 @@ textarea {
 }
 @media (max-width: 767px) {
   .community-quote {
-    padding: 17px 16px 18px;
-    gap: 10px;
-    margin-bottom: 24px;
-  }
-  .quote-glyph {
-    font-size: 43px;
-    margin-top: 1px;
+    margin-bottom: 18px;
   }
   .community-quote blockquote {
-    font-size: 16px;
-    line-height: 1.85;
-    letter-spacing: -0.45px;
-  }
-  .community-quote blockquote p + p {
-    margin-top: 5px;
-  }
-  .community-quote figcaption {
     font-size: 12px;
-    margin-top: 10px;
+    line-height: 1.8;
   }
   .page-home > .page-heading {
     gap: 17px;
@@ -2869,4 +2835,93 @@ textarea {
   .card-marker .ping-ground-outer {
     animation: none !important;
   }
+}
+
+/* Reactions and the date range remain readable in both board layouts. */
+.like-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  padding: 7px 9px;
+  border: 1px solid #686047;
+  border-radius: 8px;
+  color: #c5bea8;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+  transition: background 0.2s, color 0.2s;
+}
+.like-button:hover,
+.like-button[aria-pressed="true"] {
+  color: #f2d780;
+  border-color: #bc9747;
+  background: #b68b2925;
+}
+.like-button:focus-visible,
+.date-range-filter input:focus-visible {
+  outline: 2px solid #d4b55e;
+  outline-offset: 3px;
+}
+.like-button:disabled { opacity: 0.6; cursor: wait; }
+.weekly-rank { color: #e1c675; font-size: 12px; font-weight: 600; margin-bottom: 11px; }
+.weekly-rank span { font-weight: 400; color: #b6a875; }
+.feed-description { color: #a8a38e; font-size: 12px; line-height: 1.8; margin: 2px 0 16px; }
+.date-range-filter {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 18px;
+  margin-bottom: 16px;
+  border: 1px solid #484538;
+  border-radius: 12px;
+  background: #23251f;
+}
+.date-range-filter label { display: grid; gap: 7px; color: #c5bfa9; font-size: 12px; }
+.date-range-filter input {
+  color-scheme: dark;
+  background: #1d201b;
+  border: 1px solid #655e45;
+  border-radius: 7px;
+  padding: 9px 11px;
+  color: #e2dac2;
+  font: inherit;
+  min-width: 145px;
+  min-height: 40px;
+}
+.date-range-filter .secondary-button { min-height: 40px; }
+.date-range-dash { align-self: center; padding-top: 22px; color: #aaa28b; }
+.date-range-hint { width: 100%; font-size: 12px; color: #a7a18b; margin: 0; line-height: 1.7; }
+.date-range-filter .form-error { width: 100%; margin: 0; }
+@media (min-width: 768px) {
+  .space-board .board-cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 44px 10%;
+    padding: 44px 5% 64px;
+    height: auto;
+    min-height: 0;
+  }
+  .space-board .board-card {
+    position: relative;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    display: block;
+    width: 100%;
+    max-width: none;
+  }
+  .space-board .board-card:nth-child(even) { margin-top: 30px; }
+  .space-board { height: auto; min-height: 0; }
+}
+@media (max-width: 767px) {
+  .date-range-filter { gap: 10px; padding: 14px; }
+  .date-range-filter label { flex: 1; min-width: 0; }
+  .date-range-filter input { min-width: 0; width: 100%; }
+  .date-range-dash { display: none; }
+  .date-range-filter .secondary-button { width: 100%; }
+  .space-board .board-card:nth-child(n + 5) { display: block; }
 }

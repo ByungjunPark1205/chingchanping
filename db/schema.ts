@@ -42,6 +42,18 @@ export const compliments = sqliteTable(
     index("idx_compliments_hidden_created").on(t.isHidden, t.createdAt),
   ],
 );
+export const complimentLikes = sqliteTable(
+  "compliment_likes",
+  {
+    complimentId: text("compliment_id").notNull().references(() => compliments.id),
+    userId: text("user_id").notNull().references(() => users.id),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [
+    uniqueIndex("idx_likes_compliment_user").on(t.complimentId, t.userId),
+    index("idx_likes_created").on(t.createdAt, t.complimentId),
+  ],
+);
 export const reports = sqliteTable(
   "reports",
   {

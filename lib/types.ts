@@ -13,6 +13,9 @@ export type Ping = {
   receiver: Member;
   isNew?: boolean;
   category: string;
+  likes: number;
+  liked: boolean;
+  weeklyLikes: number;
 };
 export type Page =
   | "home"

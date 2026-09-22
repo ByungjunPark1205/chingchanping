@@ -27,6 +27,7 @@ import {
   stats,
   viewer,
   startOfSeoulDay,
+  dateRange,
 } from "@/lib/server/service";
 export const dynamic = "force-dynamic";
 const json = (data: unknown, status = 200, cookie?: string) =>
@@ -45,23 +46,27 @@ async function get(req: Request) {
   const path = new URL(req.url).pathname.replace(/^\/api/, "");
   if (path === "/home") {
     const user = await currentUser(req);
-    const [me, board, people, numbers] = await Promise.all([
+    const range = dateRange(new URL(req.url).searchParams);
+    const options = { ...range, viewerId: user?.id };
+    const [me, board, weekly, people, numbers] = await Promise.all([
       viewer(user),
-      pings(),
+      pings(options),
+      pings({ ...options, weekly: true }),
       members(),
       stats(),
     ]);
-    return json({ viewer: me, pings: board, members: people, stats: numbers });
+    return json({ viewer: me, pings: board, weeklyPings: weekly, members: people, stats: numbers });
   }
   if (path === "/received") {
     const user = await requireUser(req);
-    return json({ member: await member(user.id), pings: await pings(user.id) });
+    return json({ member: await member(user.id), pings: await pings({ receiverId: user.id, viewerId: user.id }) });
   }
   if (path.startsWith("/users/")) {
     const id = decodeURIComponent(path.slice(7));
     const person = await member(id);
     if (!person) fail(404, "해당 사용자를 찾을 수 없어요.");
-    return json({ member: person, pings: await pings(id) });
+    const user = await currentUser(req);
+    return json({ member: person, pings: await pings({ receiverId: id, viewerId: user?.id }) });
   }
   if (path === "/admin") {
     await requireAdmin(req);
@@ -163,6 +168,26 @@ async function post(req: Request) {
     return json({ ok: true }, 200, clearSessionCookie(req));
   }
   const user = await requireUser(req);
+  if (path === "/compliments/like") {
+    const id = clean(body.complimentId, "칭찬", 64);
+    if (typeof body.liked !== "boolean") fail(400, "공감 여부를 확인해주세요.");
+    await rateLimit(`like:${user.id}`, 120, 60000);
+    const target = await first(
+      "SELECT c.id FROM compliments c JOIN users u ON u.id=c.receiver_id WHERE c.id=? AND c.is_hidden=0 AND u.is_active=1",
+      id,
+    );
+    if (!target) fail(404, "해당 칭찬을 찾을 수 없어요.");
+    if (body.liked) {
+      // The unique pair makes retries and concurrent requests idempotent.
+      await run(
+        "INSERT INTO compliment_likes (compliment_id,user_id,created_at) VALUES (?,?,?) ON CONFLICT(compliment_id,user_id) DO NOTHING",
+        id, user.id, now,
+      );
+    } else {
+      await run("DELETE FROM compliment_likes WHERE compliment_id=? AND user_id=?", id, user.id);
+    }
+    return json({ ok: true });
+  }
   if (path === "/auth/password") {
     await rateLimit(`password:${user.id}`, 5, 15 * 60000);
     const next = password(body.password);

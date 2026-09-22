@@ -25,6 +25,9 @@ export const examplePings: Ping[] = exampleMembers.map((receiver, i) => ({
   receiver,
   message: messages[i],
   createdAt: 0,
+  likes: 0,
+  liked: false,
+  weeklyLikes: 0,
   category: [
     "따뜻하게 챙겨줘요",
     "함께해서 즐거워요",

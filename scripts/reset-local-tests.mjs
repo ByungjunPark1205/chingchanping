@@ -14,6 +14,7 @@ for(const a of accounts){assert.match(a.id,/^[a-f0-9-]{36}$/);assert.match(a.nam
 const placeholders=accounts.map(()=>'?').join(',');const ids=accounts.map(a=>a.id);
 db.exec('BEGIN');
 try{
+  db.prepare(`DELETE FROM compliment_likes WHERE user_id IN (${placeholders}) OR compliment_id IN (SELECT id FROM compliments WHERE sender_id IN (${placeholders}) OR receiver_id IN (${placeholders}))`).run(...ids,...ids,...ids);
   db.prepare(`DELETE FROM reports WHERE reporter_id IN (${placeholders}) OR compliment_id IN (SELECT id FROM compliments WHERE sender_id IN (${placeholders}) OR receiver_id IN (${placeholders}))`).run(...ids,...ids,...ids);
   db.prepare(`DELETE FROM compliments WHERE sender_id IN (${placeholders}) OR receiver_id IN (${placeholders})`).run(...ids,...ids);
   db.prepare(`DELETE FROM sessions WHERE user_id IN (${placeholders})`).run(...ids);

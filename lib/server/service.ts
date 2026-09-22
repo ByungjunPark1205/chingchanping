@@ -1,6 +1,6 @@
 import type { Member, Ping, Viewer } from "@/lib/types";
 import { all, first } from "./db";
-import type { Account } from "./auth";
+import { fail, type Account } from "./auth";
 const countSQL =
   "(SELECT COUNT(*) FROM compliments c WHERE c.receiver_id=u.id AND c.is_hidden=0)";
 const memberSQL = `SELECT u.id,u.chat_nickname,u.lol_nickname,u.avatar,${countSQL} AS count FROM users u`;
@@ -47,7 +47,36 @@ export async function viewer(user: Account | null): Promise<Viewer | null> {
   );
   return { ...m, role: user.role, unread: count?.total ?? 0 };
 }
-export async function pings(receiverId?: string): Promise<Ping[]> {
+export function dateRange(params: URLSearchParams) {
+  const start = params.get("start");
+  const end = params.get("end");
+  if (start === null && end === null) return {};
+  const parse = (value: string | null) => {
+    if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value))
+      return fail(400, "시작 날짜와 마지막 날짜를 모두 선택해주세요.");
+    const utc = Date.parse(`${value}T00:00:00Z`);
+    if (!Number.isFinite(utc) || new Date(utc).toISOString().slice(0, 10) !== value)
+      return fail(400, "올바른 날짜를 선택해주세요.");
+    return utc - 9 * 3600000;
+  };
+  const from = parse(start);
+  const until = parse(end) + 86400000;
+  if (from >= until) fail(400, "마지막 날짜는 시작 날짜보다 빠를 수 없어요.");
+  return { from, until };
+}
+export function startOfSeoulWeek(now = Date.now()) {
+  const day = startOfSeoulDay(now);
+  const weekday = new Date(day + 9 * 3600000).getUTCDay();
+  return day - ((weekday + 6) % 7) * 86400000;
+}
+export async function pings(options: {
+  receiverId?: string;
+  viewerId?: string;
+  from?: number;
+  until?: number;
+  weekly?: boolean;
+} = {}): Promise<Ping[]> {
+  const { receiverId, viewerId, from, until, weekly } = options;
   type PingRow = {
     id: string;
     message: string;
@@ -58,17 +87,35 @@ export async function pings(receiverId?: string): Promise<Ping[]> {
     lol_nickname: string;
     avatar: number;
     count: number;
+    likes: number;
+    liked: number;
+    weekly_likes: number;
   };
   // Explicit projection: sender IDs and private account fields never leave this function.
+  const weekStart = startOfSeoulWeek();
+  const filters = ["c.is_hidden=0", "u.is_active=1"];
+  const bindings: (string | number)[] = [viewerId ?? "", weekStart, weekStart + 7 * 86400000];
+  if (receiverId) { filters.push("c.receiver_id=?"); bindings.push(receiverId); }
+  if (from !== undefined) { filters.push("c.created_at>=?"); bindings.push(from); }
+  if (until !== undefined) { filters.push("c.created_at<?"); bindings.push(until); }
   const rows = await all<PingRow>(
-    `SELECT c.id,c.message,c.created_at,c.category,c.receiver_id,u.chat_nickname,u.lol_nickname,u.avatar,${countSQL} AS count FROM compliments c JOIN users u ON u.id=c.receiver_id WHERE c.is_hidden=0 AND u.is_active=1${receiverId ? " AND c.receiver_id=?" : ""} ORDER BY c.created_at DESC,c.id DESC LIMIT 500`,
-    ...(receiverId ? [receiverId] : []),
+    `SELECT * FROM (
+      SELECT c.id,c.message,c.created_at,c.category,c.receiver_id,u.chat_nickname,u.lol_nickname,u.avatar,${countSQL} AS count,
+        (SELECT COUNT(*) FROM compliment_likes l JOIN users liker ON liker.id=l.user_id WHERE l.compliment_id=c.id AND liker.is_active=1) AS likes,
+        EXISTS(SELECT 1 FROM compliment_likes l WHERE l.compliment_id=c.id AND l.user_id=?) AS liked,
+        (SELECT COUNT(*) FROM compliment_likes l JOIN users liker ON liker.id=l.user_id WHERE l.compliment_id=c.id AND liker.is_active=1 AND l.created_at>=? AND l.created_at<?) AS weekly_likes
+      FROM compliments c JOIN users u ON u.id=c.receiver_id WHERE ${filters.join(" AND ")}
+    ) ${weekly ? "WHERE weekly_likes>0 ORDER BY weekly_likes DESC,created_at DESC,id DESC LIMIT 3" : "ORDER BY created_at DESC,id DESC LIMIT 500"}`,
+    ...bindings,
   );
   return rows.map((r) => ({
     id: r.id,
     message: r.message,
     category: r.category,
     createdAt: r.created_at,
+    likes: r.likes,
+    liked: Boolean(r.liked),
+    weeklyLikes: r.weekly_likes,
     receiver: toMember({ ...r, id: r.receiver_id }),
   }));
 }

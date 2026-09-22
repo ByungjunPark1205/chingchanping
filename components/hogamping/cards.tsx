@@ -13,17 +13,24 @@ export function PingCard({
   example = false,
   className = "",
   onReport,
+  onLike,
+  rank,
 }: {
   ping: Ping;
   index?: number;
   example?: boolean;
   className?: string;
   onReport?: (ping: Ping) => void;
+  onLike?: (ping: Ping) => Promise<void>;
+  rank?: number;
 }) {
+  const [liking, setLiking] = useState(false);
+  const [mountedAt] = useState(() => Date.now());
   return (
     <article
-      className={`ping-card tone-${index % 3} ${!example && Date.now() - ping.createdAt < 8000 ? "fresh-ping" : ""} ${className}`}
+      className={`ping-card tone-${index % 3} ${!example && mountedAt - ping.createdAt < 8000 ? "fresh-ping" : ""} ${className}`}
     >
+      {rank && <div className="weekly-rank">이번 주 공감 {rank}위 <span>· {ping.weeklyLikes}개</span></div>}
       <div className="card-top">
         <span className="card-category">
           <ThumbsUp size={12} />
@@ -56,9 +63,23 @@ export function PingCard({
             </span>
           </Link>
         )}
-        <span className="card-ping">
-          <PingIcon size={15} /> 칭찬핑 +1
-        </span>
+        {example ? (
+          <span className="card-ping"><PingIcon size={15} /> 칭찬핑 +1</span>
+        ) : (
+          <button
+            className="like-button"
+            aria-label={`공감해요 ${ping.likes}개`}
+            aria-pressed={ping.liked}
+            disabled={liking || !onLike}
+            onClick={async () => {
+              if (!onLike || liking) return;
+              setLiking(true);
+              try { await onLike(ping); } finally { setLiking(false); }
+            }}
+          >
+            <ThumbsUp size={14} /> 공감해요 <b>{ping.likes}</b>
+          </button>
+        )}
       </div>
       {onReport && (
         <button className="report-button" onClick={() => onReport(ping)}>
@@ -75,11 +96,13 @@ export function PingCollection({
   loading,
   error,
   onReport,
+  onLike,
 }: {
   pings: Ping[];
   loading?: boolean;
   error?: string;
   onReport?: (p: Ping) => void;
+  onLike?: (p: Ping) => Promise<void>;
 }) {
   const [limit, setLimit] = useState(12);
   return loading ? (
@@ -92,7 +115,7 @@ export function PingCollection({
     <>
       <div className="ping-collection">
         {pings.slice(0, limit).map((p, i) => (
-          <PingCard key={p.id} ping={p} index={i} onReport={onReport} />
+          <PingCard key={p.id} ping={p} index={i} onReport={onReport} onLike={onLike} />
         ))}
       </div>
       {pings.length > limit && (

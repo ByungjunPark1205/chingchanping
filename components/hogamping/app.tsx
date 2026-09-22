@@ -1,6 +1,7 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowDown,
   ArrowRight,
@@ -62,8 +63,12 @@ export function Chingchanping({
   page: Page;
   userId?: string;
 }) {
+  const router = useRouter();
   const [viewer, setViewer] = useState<Viewer | null>(null);
   const [pings, setPings] = useState<Ping[]>([]);
+  const [weeklyPings, setWeeklyPings] = useState<Ping[]>([]);
+  const [homeQuery, setHomeQuery] = useState("");
+  const refreshSequence = useRef(0);
   const [members, setMembers] = useState<Member[]>([]);
   const [stats, setStats] = useState({ pings: 0, members: 0, today: 0 });
   const [loading, setLoading] = useState(true);
@@ -79,25 +84,30 @@ export function Chingchanping({
   const [privateLoading, setPrivateLoading] = useState(false);
 
   const refresh = useCallback(async () => {
+    const sequence = ++refreshSequence.current;
     try {
       const data = await api<{
         viewer: Viewer | null;
         pings: Ping[];
+        weeklyPings: Ping[];
         members: Member[];
         stats: typeof stats;
-      }>("/home");
+      }>(`/home${homeQuery}`);
+      if (sequence !== refreshSequence.current) return;
       setViewer(data.viewer);
       setPings(data.pings);
+      setWeeklyPings(data.weeklyPings);
       setMembers(data.members);
       setStats(data.stats);
       setError("");
     } catch (e) {
-      setError((e as Error).message);
+      if (sequence === refreshSequence.current) setError((e as Error).message);
     } finally {
-      setLoading(false);
+      if (sequence === refreshSequence.current) setLoading(false);
     }
-  }, []);
+  }, [homeQuery]);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Fetch initial data and hydrate the browser-only preference after SSR.
     void refresh();
     const pref = localStorage.getItem("hogamping-motion");
     if (pref === "off") setMotion(false);
@@ -117,6 +127,7 @@ export function Chingchanping({
     let cancelled = false;
     const id = userId ?? viewer?.id;
     if ((page !== "profile" && page !== "received") || !id) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Reset the request indicator when the profile or authenticated account changes.
     setPrivateLoading(true);
     setPrivateError("");
     void api<{ member: Member; pings: Ping[] }>(
@@ -237,7 +248,17 @@ export function Chingchanping({
       await api("/auth/logout", {});
       setViewer(null);
       setPrivatePings([]);
+      await refresh();
       toast("다음 게임에서 또 만나요.");
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  }
+  async function like(ping: Ping) {
+    if (!viewer) { setAuth("login"); return; }
+    try {
+      await api("/compliments/like", { complimentId: ping.id, liked: !ping.liked });
+      await refresh();
     } catch (e) {
       toast.error((e as Error).message);
     }
@@ -281,11 +302,7 @@ export function Chingchanping({
           </nav>
           <div className="sidebar-note">
             <PingMark />
-            <p>
-              좋은 행동을 발견하면,
-              <br />
-              칭찬으로 알려주세요.
-            </p>
+            <p>좋은 행동을 발견하면, 칭찬으로 알려주세요.</p>
             <span>
               함께해서 고마웠던 순간을
               <br />
@@ -320,9 +337,9 @@ export function Chingchanping({
               </button>
             </div>
           ) : (
-            <button className="sidebar-login" onClick={() => setAuth("login")}>
+            <button className="sidebar-login" onClick={() => setAuth("register")}>
               <UserRound size={19} />
-              <span>우리 아지트에 들어오기</span>
+              <span>가입하기</span>
               <ArrowRight size={16} />
             </button>
           )}
@@ -345,7 +362,7 @@ export function Chingchanping({
               className="icon-button"
               aria-label="받은 칭찬핑 확인"
               onClick={() =>
-                viewer ? location.assign("/received") : setAuth("login")
+                viewer ? router.push("/received") : setAuth("login")
               }
             >
               <Bell size={19} />
@@ -373,8 +390,19 @@ export function Chingchanping({
           {page === "home" && (
             <HomeBoard
               pings={pings}
+              weeklyPings={weeklyPings}
               stats={stats}
               loading={loading}
+              error={error}
+              onLike={like}
+              onDateRange={(start, end) => {
+                const query = start && end ? `?${new URLSearchParams({ start, end })}` : "";
+                if (query !== homeQuery) {
+                  ++refreshSequence.current;
+                  setLoading(true);
+                  setHomeQuery(query);
+                }
+              }}
               onGuide={() => setGuide(true)}
             />
           )}
@@ -435,6 +463,7 @@ export function Chingchanping({
                 loading={privateLoading}
                 error={privateError}
                 onReport={setReport}
+                onLike={like}
               />
             </>
           )}
@@ -485,7 +514,7 @@ export function Chingchanping({
                   <h2 className="section-title">
                     {profile.chatNickname}님에게 도착한 마음
                   </h2>
-                  <PingCollection pings={privatePings} />
+                  <PingCollection pings={privatePings} onLike={like} />
                 </>
               ) : null}
             </>
@@ -611,45 +640,41 @@ export function Chingchanping({
 
 function HomeBoard({
   pings,
+  weeklyPings,
   stats,
   loading,
+  error,
+  onLike,
+  onDateRange,
   onGuide,
 }: {
   pings: Ping[];
+  weeklyPings: Ping[];
   stats: { pings: number; members: number; today: number };
   loading: boolean;
+  error: string;
+  onLike: (ping: Ping) => Promise<void>;
+  onDateRange: (start?: string, end?: string) => void;
   onGuide: () => void;
 }) {
   const [mode, setMode] = useState("space");
   const [filter, setFilter] = useState("all");
   const [limit, setLimit] = useState(12);
-  const isExample = !loading && stats.pings === 0;
-  const source = isExample ? examplePings : pings;
-  const filtered =
-    filter === "today"
-      ? source.filter(
-          (p) =>
-            new Date(p.createdAt).toLocaleDateString("en-CA", {
-              timeZone: "Asia/Seoul",
-            }) ===
-            new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Seoul" }),
-        )
-      : source;
+  const [today] = useState(() => new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10));
+  const [start, setStart] = useState(today);
+  const [end, setEnd] = useState(today);
+  const [appliedRange, setAppliedRange] = useState("");
+  const [dateError, setDateError] = useState("");
+  const isExample = !loading && !error && !appliedRange && stats.pings === 0;
+  const rankedIds = new Set(weeklyPings.map((p) => p.id));
+  const filtered = isExample ? examplePings : [
+    ...weeklyPings,
+    ...pings.filter((p) => !rankedIds.has(p.id)),
+  ];
   return (
     <>
       <figure className="community-quote">
-        <span className="quote-glyph" aria-hidden="true">
-          “
-        </span>
-        <div>
-          <blockquote>
-            <p>남을 찬양하면 자신에게 돌아온다.</p>
-            <p>사람이란 자신을 칭찬하는 사람을 칭찬하고 싶어한다.</p>
-          </blockquote>
-          <figcaption>
-            — 괴테 <span>(독일 시인)</span>
-          </figcaption>
-        </div>
+        <blockquote>“남을 찬양하면 자신에게 돌아온다. 사람이란 자신을 칭찬하는 사람을 칭찬하고 싶어한다.” <cite>— 괴테 (독일 시인)</cite></blockquote>
       </figure>
       <PageHeading
         title="오늘도, 칭찬핑"
@@ -669,10 +694,18 @@ function HomeBoard({
             <span className="board-total">{stats.pings}</span>
           </div>
           <div className="board-controls">
-            <Tabs value={filter} onValueChange={setFilter}>
+            <Tabs value={filter} onValueChange={(value) => {
+              setFilter(value);
+              setDateError("");
+              if (value === "all") {
+                setAppliedRange("");
+                setLimit(12);
+                onDateRange();
+              }
+            }}>
               <TabsList className="filter-tabs">
                 <TabsTrigger value="all">전체</TabsTrigger>
-                <TabsTrigger value="today">오늘</TabsTrigger>
+                <TabsTrigger value="custom">지정날짜</TabsTrigger>
               </TabsList>
             </Tabs>
             <div
@@ -699,6 +732,38 @@ function HomeBoard({
             </div>
           </div>
         </div>
+        {filter === "custom" && (
+          <form className="date-range-filter" onSubmit={(event) => {
+            event.preventDefault();
+            const fields = new FormData(event.currentTarget);
+            const from = String(fields.get("start") ?? "");
+            const until = String(fields.get("end") ?? "");
+            if (!from || !until || from > until) {
+              setDateError("시작 날짜와 마지막 날짜를 올바른 순서로 선택해주세요.");
+              return;
+            }
+            setDateError("");
+            setStart(from);
+            setEnd(until);
+            setAppliedRange(`${from} ~ ${until}`);
+            setLimit(12);
+            onDateRange(from, until);
+          }}>
+            <label>시작 날짜<input type="date" name="start" defaultValue={start} required /></label>
+            <span className="date-range-dash" aria-hidden="true">—</span>
+            <label>마지막 날짜<input type="date" name="end" defaultValue={end} required /></label>
+            <button type="submit" className="secondary-button">적용하기</button>
+            <p className="date-range-hint">{appliedRange ? `${appliedRange}에 등록된 칭찬` : "기간을 선택하고 적용해주세요. 현재는 전체 기간이에요."} · 한국 시간 기준</p>
+            {dateError && <p role="alert" className="form-error">{dateError}</p>}
+          </form>
+        )}
+        {!loading && !error && !isExample && filtered.length > 0 && (
+          <p className="feed-description">
+            {weeklyPings.length > 0
+              ? "이번 주 공감을 많이 받은 칭찬 최대 3개와 최신 칭찬을 모았어요. 공감 순위는 매주 월요일 0시(한국 시간)에 새로 시작해요."
+              : "최근에 도착한 칭찬부터 보여드려요."}
+          </p>
+        )}
         {isExample && (
           <div className="example-label">
             <Sparkles size={13} />
@@ -728,11 +793,13 @@ function HomeBoard({
           )}
           {loading ? (
             <Loading />
+          ) : error ? (
+            <Empty title="칭찬을 불러오지 못했어요" text="위의 다시 연결 버튼을 눌러주세요." />
           ) : filtered.length === 0 ? (
             <Empty
               title={
-                filter === "today"
-                  ? "오늘의 첫 칭찬핑을 찍어볼까요?"
+                appliedRange
+                  ? "선택한 기간에 도착한 칭찬이 없어요."
                   : undefined
               }
               text="고마웠던 한 사람에게 칭찬을 남겨보세요."
@@ -752,6 +819,8 @@ function HomeBoard({
                     example={isExample}
                     className={`board-card card-position-${i}`}
                     index={i}
+                    onLike={onLike}
+                    rank={!isExample && i < weeklyPings.length ? i + 1 : undefined}
                   />
                 ))}
             </div>
