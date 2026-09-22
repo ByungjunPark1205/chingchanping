@@ -23,6 +23,7 @@ const child = spawn(
     "0.0.0.0",
     "--port",
     port,
+    "--enable-containers=false",
     "--inspector-port",
     "0",
   ],
