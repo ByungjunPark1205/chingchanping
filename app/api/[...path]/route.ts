@@ -90,7 +90,7 @@ async function post(req: Request) {
   if (path === "/auth/register") {
     await rateLimit(`register:${await ipKey(req)}`, 5, 3600000);
     const chat = clean(body.chatNickname, "톡방 닉네임", 24, 2);
-    const lol = clean(body.lolNickname, "게임 닉네임", 40, 2);
+    const lol = body.lolNickname == null ? "" : clean(body.lolNickname, "게임 닉네임", 40, 0);
     const pass = password(body.password);
     if (/[\r\n\t]/.test(chat + lol))
       fail(400, "닉네임에는 줄바꿈을 넣을 수 없어요.");
@@ -349,7 +349,7 @@ async function patch(req: Request) {
   const user = await requireUser(req);
   await rateLimit(`profile:${user.id}`, 20, 3600000);
   const chat = clean(body.chatNickname, "톡방 닉네임", 24, 2);
-  const lol = clean(body.lolNickname, "게임 닉네임", 40, 2);
+  const lol = body.lolNickname === undefined ? user.lol_nickname : clean(body.lolNickname, "게임 닉네임", 40, 0);
   if (/[\r\n\t]/.test(chat + lol))
     fail(400, "닉네임에는 줄바꿈을 넣을 수 없어요.");
   try {

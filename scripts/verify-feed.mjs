@@ -55,6 +55,17 @@ try {
   assert.deepEqual((await request("/home")).data.weeklyPings, []);
   assert.equal((await fetch(origin)).status, 200);
   db = new DatabaseSync(path.join(dataRoot, "chingchanping.sqlite"));
+  const registration = await request("/auth/register", { chatNickname: "가입검증", password: "Nickname-only-password-2026" }, null, 201);
+  const registeredCookie = registration.response.headers.get("set-cookie").split(";")[0];
+  const registered = (await request("/home", undefined, registeredCookie)).data.viewer;
+  assert.equal(registered.chatNickname, "가입검증");
+  assert.equal(registered.lolNickname, "");
+  assert.match(db.prepare("SELECT password_hash FROM users WHERE id=?").get(registered.id).password_hash, /^\$2[aby]\$12\$/);
+  await request("/auth/login", { chatNickname: "가입검증", password: "Nickname-only-password-2026" });
+  await request("/auth/register", { chatNickname: "가입검증", password: "Nickname-only-password-2026" }, null, 409);
+  await request("/auth/register", { chatNickname: "빈비번검증", password: "" }, null, 400);
+  const profile = await fetch(origin + "/api/profile", { method: "PATCH", headers: { "Content-Type": "application/json", Origin: origin, Cookie: registeredCookie }, body: JSON.stringify({ chatNickname: "가입검증", lolNickname: "" }) });
+  assert.equal(profile.status, 200); checks++;
   const now = Date.now(), day = 86400000;
   const seoulDay = Math.floor((now + 9 * 3600000) / day) * day - 9 * 3600000;
   const week = seoulDay - ((new Date(seoulDay + 9 * 3600000).getUTCDay() + 6) % 7) * day;

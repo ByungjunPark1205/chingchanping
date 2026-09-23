@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./rift.css";
 
 export const metadata: Metadata = {
   title: "칭찬핑 · 서로의 좋은 행동을 발견하는 곳",

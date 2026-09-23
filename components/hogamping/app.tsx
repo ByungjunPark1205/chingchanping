@@ -40,6 +40,7 @@ import { toast } from "sonner";
 import { PingMark, PingIcon, Avatar } from "./visuals";
 import { PageHeading, Loading, Empty } from "./common";
 import { PingCard, PingCollection } from "./cards";
+import { PingMap } from "./ping-map";
 import { AuthDialog, ComposeDialog, ReportDialog } from "./dialogs";
 import { SettingsView } from "./settings";
 import { AdminView } from "./admin";
@@ -485,9 +486,9 @@ export function Chingchanping({
                         우리 아지트의 소중한 한 사람
                       </div>
                       <h1>{profile.chatNickname}</h1>
-                      <p>
+                      {profile.lolNickname && <p>
                         게임 닉네임 <span>{profile.lolNickname}</span>
-                      </p>
+                      </p>}
                     </div>
                     <div className="profile-count">
                       <ThumbsUp size={20} />
@@ -578,6 +579,7 @@ export function Chingchanping({
         ))}
       </nav>
       <AuthDialog
+        key={auth ?? "closed"}
         mode={auth}
         setMode={setAuth}
         onSuccess={async () => {
@@ -587,12 +589,13 @@ export function Chingchanping({
       />
       {viewer && recipient && (
         <ComposeDialog
+          key={recipient.id}
           member={recipient}
           onClose={() => setRecipient(null)}
           onSuccess={refresh}
         />
       )}
-      <ReportDialog ping={report} onClose={() => setReport(null)} />
+      <ReportDialog key={report?.id ?? "closed"} ping={report} onClose={() => setReport(null)} />
       <Dialog open={guide} onOpenChange={setGuide}>
         <DialogContent className="hogam-dialog">
           <DialogTitle>칭찬핑, 이렇게 찍어요</DialogTitle>
@@ -622,7 +625,7 @@ export function Chingchanping({
           </div>
           <p className="muted">
             한 사람에게는 1분에 한 번, 하루 3번까지, 전체 하루 10번까지 보낼 수
-            있어요. 순위도, 경쟁도 없이 마음만 전해주세요.
+            있어요. 고마웠던 행동을 떠올리며 마음을 전해주세요.
           </p>
           <button
             className="primary-button full"
@@ -770,26 +773,8 @@ function HomeBoard({
           </div>
         )}
         <div
-          className={`ping-board ${mode === "list" ? "list-board" : "space-board"}`}
+          className={`ping-board ${mode === "list" ? "list-board" : "map-board"}`}
         >
-          {mode === "space" && (
-            <div className="board-map" aria-hidden="true">
-              <div className="map-ring radar-inner" />
-              <div className="map-ring radar-middle" />
-              <div className="map-ring radar-outer" />
-              <div className="map-cross vertical" />
-              <div className="map-cross horizontal" />
-              <div className="map-center">
-                <PingMark />
-                <span>좋은 행동, 칭찬으로 남기다</span>
-              </div>
-              <span className="map-plus plus-one">+</span>
-              <span className="map-plus plus-two">+</span>
-              <span className="map-dot dot-one" />
-              <span className="map-dot dot-two" />
-              <span className="map-dot dot-three" />
-            </div>
-          )}
           {loading ? (
             <Loading />
           ) : error ? (
@@ -807,10 +792,12 @@ function HomeBoard({
                 사람 찾으러 가기 <ArrowRight size={16} />
               </Link>
             </Empty>
+          ) : mode === "space" ? (
+            <PingMap key={appliedRange} pings={filtered} weeklyIds={isExample ? [] : weeklyPings.map((ping) => ping.id)} example={isExample} onLike={onLike} />
           ) : (
             <div className="board-cards">
               {filtered
-                .slice(0, mode === "space" ? 6 : limit)
+                .slice(0, limit)
                 .map((ping, i) => (
                   <PingCard
                     key={ping.id}
@@ -824,9 +811,6 @@ function HomeBoard({
                 ))}
             </div>
           )}
-          <div className="board-coordinate" aria-hidden="true">
-            OUR LITTLE UNIVERSE <span>✦</span>
-          </div>
         </div>
         {mode === "list" && filtered.length > limit && (
           <button className="load-more" onClick={() => setLimit((l) => l + 12)}>
@@ -948,7 +932,7 @@ function MemberDirectory({
                 <Link href={`/user/${m.id}`} className="member-identity">
                   <Avatar name={m.chatNickname} index={m.avatar} large />
                   <h2>{m.chatNickname}</h2>
-                  <p>{m.lolNickname}</p>
+                  <p>{m.lolNickname || "톡방 멤버"}</p>
                 </Link>
                 <div className="member-count">
                   <ThumbsUp size={14} />

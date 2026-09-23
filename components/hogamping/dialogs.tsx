@@ -1,6 +1,6 @@
 "use client";
-import { useEffect, useState } from "react";
-import { Check, Flag, ThumbsUp, Loader2, LockKeyhole } from "lucide-react";
+import { useState } from "react";
+import { Check, Eye, EyeOff, Flag, ThumbsUp, Loader2, LockKeyhole } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/client";
 import { categories, type Member, type Ping } from "@/lib/types";
@@ -26,18 +26,15 @@ export function AuthDialog({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [remember, setRemember] = useState(true);
-  useEffect(() => setError(""), [mode]);
+  const [showPassword, setShowPassword] = useState(false);
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     setBusy(true);
     setError("");
     try {
-      if (mode === "register" && form.get("password") !== form.get("confirm"))
-        throw new Error("비밀번호가 서로 달라요. 다시 확인해주세요.");
       await api(`/auth/${mode}`, {
         chatNickname: form.get("chatNickname"),
-        lolNickname: form.get("lolNickname"),
         password: form.get("password"),
         remember,
       });
@@ -83,45 +80,33 @@ export function AuthDialog({
               placeholder="톡방에서 사용하는 닉네임"
             />
           </label>
-          {mode === "register" && (
-            <label>
-              게임 닉네임
-              <input
-                name="lolNickname"
-                required
-                maxLength={40}
-                placeholder="게임에서 사용하는 닉네임"
-              />
-            </label>
-          )}
           <label>
             비밀번호
-            <input
-              type="password"
-              name="password"
-              autoComplete={
-                mode === "register" ? "new-password" : "current-password"
-              }
-              required
-              minLength={10}
-              maxLength={64}
-              placeholder="10자 이상 입력해주세요"
-            />
-          </label>
-          {mode === "register" ? (
-            <label>
-              비밀번호 확인
+            <span className="password-input-wrap">
               <input
-                type="password"
-                name="confirm"
-                autoComplete="new-password"
+                type={showPassword ? "text" : "password"}
+                name="password"
+                aria-label="비밀번호"
+                autoComplete={
+                  mode === "register" ? "new-password" : "current-password"
+                }
                 required
                 minLength={10}
                 maxLength={64}
-                placeholder="비밀번호를 한 번 더 입력해주세요"
+                placeholder="10자 이상 입력해주세요"
               />
-            </label>
-          ) : (
+              <button
+                type="button"
+                className="password-visibility"
+                aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
+                aria-pressed={showPassword}
+                onClick={() => setShowPassword((value) => !value)}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </span>
+          </label>
+          {mode !== "register" && (
             <label className="check-label">
               <Checkbox
                 checked={remember}
@@ -174,12 +159,6 @@ export function ComposeDialog({
   const [category, setCategory] = useState(categories[0]);
   const [phase, setPhase] = useState("writing");
   const [error, setError] = useState("");
-  useEffect(() => {
-    setMessage("");
-    setPhase("writing");
-    setError("");
-    setCategory(categories[0]);
-  }, [member?.id]);
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!member) return;
@@ -316,10 +295,6 @@ export function ReportDialog({
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  useEffect(() => {
-    setReason("");
-    setError("");
-  }, [ping?.id]);
   return (
     <Dialog
       open={!!ping}

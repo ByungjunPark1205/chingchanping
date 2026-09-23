@@ -66,10 +66,9 @@ export function SettingsView({
               />
             </label>
             <label>
-              게임 닉네임
+              게임 닉네임 (선택)
               <input
                 name="lolNickname"
-                required
                 maxLength={40}
                 defaultValue={viewer.lolNickname}
               />
