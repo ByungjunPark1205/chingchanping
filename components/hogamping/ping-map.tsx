@@ -73,7 +73,6 @@ export function PingMap({ pings, weeklyIds, example, onLike }: {
           );
         })}
       </div>
-      <div className="map-instructions"><span className="map-help-desktop">핑에 마우스를 올려 칭찬을 만나보세요</span><span className="map-help-touch">핑을 눌러 칭찬을 열어보세요</span><small>공감으로 따뜻한 마음을 더해주세요</small></div>
     </div>
   );
 }

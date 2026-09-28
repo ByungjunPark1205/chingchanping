@@ -6,7 +6,6 @@ import {
   ArrowRight,
   Bell,
   ChevronRight,
-  CircleHelp,
   Compass,
   ThumbsUp,
   Home,
@@ -282,7 +281,6 @@ export function Chingchanping({
           </Link>
         </SidebarHeader>
         <SidebarContent>
-          <div className="nav-caption">우리의 작은 아지트</div>
           <nav className="side-nav" aria-label="주 메뉴">
             {nav.map(({ page: p, href, label, Icon }) => (
               <Link
@@ -299,22 +297,8 @@ export function Chingchanping({
               </Link>
             ))}
           </nav>
-          <div className="sidebar-note">
-            <PingMark />
-            <p>좋은 행동을 발견하면, 칭찬으로 알려주세요.</p>
-            <span>
-              함께해서 고마웠던 순간을
-              <br />
-              구체적인 칭찬으로 남겨보세요.
-            </span>
-          </div>
         </SidebarContent>
         <SidebarFooter className="side-footer">
-          <button onClick={() => setGuide(true)} className="guide-button">
-            <CircleHelp size={17} />
-            칭찬핑 사용 가이드
-            <ChevronRight size={14} />
-          </button>
           {viewer?.role === "admin" && (
             <Link className="guide-button" href="/admin">
               <ShieldCheck size={17} />
@@ -336,15 +320,11 @@ export function Chingchanping({
               </button>
             </div>
           ) : (
-            <button className="sidebar-login" onClick={() => setAuth("register")}>
-              <UserRound size={19} />
+            <button type="button" className="sidebar-login" onClick={() => setAuth("register")}>
+              <UserRound size={18} aria-hidden="true" />
               <span>가입하기</span>
-              <ArrowRight size={16} />
             </button>
           )}
-          <div className="sidebar-bottom">
-            GOOD ACTIONS DESERVE A PING <PingIcon size={12} />
-          </div>
         </SidebarFooter>
       </Sidebar>
       <div className="main-wrap">
