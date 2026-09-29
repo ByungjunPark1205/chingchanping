@@ -165,11 +165,18 @@ body { background: radial-gradient(ellipse at 78% 0, #152c3b 0, transparent 55%)
 .map-popup .card-marker { display: none; }
 .map-popup-close { position: absolute; top: 17px; right: 9px; padding: 5px; z-index: 2; color: #9bb6c2; }
 .edge-bottom .map-popup-close { top: 8px; }
-.list-board .board-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
-.list-board .ping-card { padding: 18px; }
-.list-board .card-message { font-size: 14px; min-height: 72px; line-height: 1.8; }
+.list-board { min-height: 0; padding: 18px 22px 26px; background: linear-gradient(180deg, #0d202b, #0b1a25); border-block: 1px solid #254450; }
+.list-board .board-cards { display: flex; flex-direction: column; gap: 10px; max-width: 980px; margin: 0 auto; }
+.list-board .board-card { position: relative; inset: auto; width: 100%; max-width: none; }
+.list-board .ping-card { display: grid; grid-template-columns: minmax(118px, .24fr) minmax(0, 1fr) minmax(142px, .28fr); align-items: center; column-gap: 18px; padding: 14px 16px; border-radius: 12px; }
+.list-board .weekly-rank { grid-column: 1 / -1; margin-bottom: -2px; }
+.list-board .card-top { grid-column: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
+.list-board .card-message { grid-column: 2; min-height: 0; margin: 0; font-size: 14px; line-height: 1.7; }
+.list-board .card-bottom { grid-column: 3; min-width: 0; border-top: 0; border-left: 1px solid #36546377; padding: 0 0 0 14px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.list-board .card-recipient { max-width: 100%; }
+.list-board .like-button { padding: 6px 9px; font-size: 11px; white-space: nowrap; }
 @keyframes map-pulse { 0%, 100% { opacity: .3; transform: scale(.85); } 50% { opacity: .65; transform: scale(1.1); } }
-@media (max-width: 1250px) { .list-board .board-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 1250px) { .list-board .board-cards { gap: 10px; } }
 @media (max-width: 767px) {
   .compliment-map { height: 530px; }
   .map-heading { top: 16px; left: 16px; }
@@ -179,9 +186,16 @@ body { background: radial-gradient(ellipse at 78% 0, #152c3b 0, transparent 55%)
   .map-pin-name { max-width: 120px; }
   .map-popup { width: 265px; }
   .map-popup .card-message { max-height: 160px; }
+  .view-toggle { display: flex; padding-left: 5px; gap: 2px; }
+  .view-toggle button { width: 28px; height: 28px; }
   .map-heading small { color: #83a6ad; }
   .feed-description, .example-label { padding: 11px 16px; font-size: 11px; }
-  .list-board .board-cards { grid-template-columns: 1fr; }
+  .list-board { padding: 14px 12px 22px; }
+  .list-board .board-cards { gap: 10px; }
+  .list-board .ping-card { grid-template-columns: 1fr; row-gap: 10px; padding: 14px; }
+  .list-board .weekly-rank, .list-board .card-top, .list-board .card-message, .list-board .card-bottom { grid-column: 1; }
+  .list-board .card-top { flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; }
+  .list-board .card-bottom { border-left: 0; border-top: 1px solid #36546377; padding: 10px 0 0; flex-direction: row; align-items: center; justify-content: space-between; }
   .mobile-nav { background: #0b1b28f2; border-color: #294350; }
   .mobile-nav a { color: #7999aa; }
   .mobile-nav a.active { color: #8ad9df; }
