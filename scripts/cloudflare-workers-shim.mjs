@@ -82,4 +82,5 @@ class D1Database {
 export const env = {
   DB: new D1Database(),
   ADMIN_SETUP_TOKEN: process.env.ADMIN_SETUP_TOKEN,
+  SIGNUP_ALERT_TOKEN: process.env.SIGNUP_ALERT_TOKEN,
 };

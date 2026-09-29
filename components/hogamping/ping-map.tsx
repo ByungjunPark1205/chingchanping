@@ -32,7 +32,7 @@ export function PingMap({ pings, weeklyIds, example, onLike }: {
       <div className="map-heading"><span>칭찬 지도</span></div>
       <span className="map-compass" aria-hidden="true"><Compass size={28} /><small>N</small></span>
       <div className="map-points">
-        {pings.slice(0, 6).map((ping, index) => {
+        {pings.slice(0, 8).map((ping, index) => {
           const open = openId === ping.id;
           const rank = weeklyIds.indexOf(ping.id) + 1;
           const popupId = `map-compliment-${ping.id}`;

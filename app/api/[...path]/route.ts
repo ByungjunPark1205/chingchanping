@@ -31,6 +31,7 @@ import {
   dateRange,
 } from "@/lib/server/service";
 import { adminMembers, previewMerge, mergeMembers, moderateMember } from "@/lib/server/member-admin";
+import { pendingSignupAlerts } from "@/lib/server/signup-alerts";
 export const dynamic = "force-dynamic";
 const json = (data: unknown, status = 200, cookie?: string) =>
   Response.json(data, {
@@ -46,6 +47,7 @@ const json = (data: unknown, status = 200, cookie?: string) =>
 
 async function get(req: Request) {
   const path = new URL(req.url).pathname.replace(/^\/api/, "");
+  if (path === "/notifications/signups") return json(await pendingSignupAlerts(req));
   if (path === "/home") {
     const user = await currentUser(req);
     const range = dateRange(new URL(req.url).searchParams);

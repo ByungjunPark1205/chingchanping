@@ -124,12 +124,14 @@ body { background: radial-gradient(ellipse at 78% 0, #152c3b 0, transparent 55%)
 .map-points { position: absolute; inset: 0; }
 .map-point { --pin: #69d2da; position: absolute; width: 110px; margin-left: -55px; margin-top: -40px; z-index: 2; }
 .map-point.is-open { z-index: 20; }
-.map-point.point-0 { left: 22%; top: 27%; --pin: #dfc485; }
-.map-point.point-1 { left: 75%; top: 24%; --pin: #8fb6f1; }
-.map-point.point-2 { left: 45%; top: 51%; --pin: #a899dd; }
-.map-point.point-3 { left: 77%; top: 70%; --pin: #6ddace; }
-.map-point.point-4 { left: 22%; top: 78%; --pin: #96c79d; }
-.map-point.point-5 { left: 53%; top: 75%; --pin: #77acd9; display: none; }
+.map-point.point-0 { left: 16%; top: 27%; --pin: #dfc485; }
+.map-point.point-1 { left: 41%; top: 22%; --pin: #8fb6f1; }
+.map-point.point-2 { left: 67%; top: 25%; --pin: #a899dd; }
+.map-point.point-3 { left: 87%; top: 45%; --pin: #6ddace; }
+.map-point.point-4 { left: 17%; top: 67%; --pin: #96c79d; }
+.map-point.point-5 { left: 43%; top: 54%; --pin: #77acd9; }
+.map-point.point-6 { left: 68%; top: 73%; --pin: #d9a875; }
+.map-point.point-7 { left: 88%; top: 78%; --pin: #8bc7bb; }
 .map-pin { width: 100%; padding: 5px 0 12px; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--pin); background: transparent; border: 0; border-radius: 12px; }
 .map-pin:focus-visible { outline-color: var(--pin); outline-offset: 4px; }
 .map-pin-symbol { position: relative; display: grid; place-items: center; height: 57px; width: 68px; transition: transform .2s ease; }
@@ -145,7 +147,8 @@ body { background: radial-gradient(ellipse at 78% 0, #152c3b 0, transparent 55%)
 .map-popup { position: absolute; top: calc(100% - 3px); left: 50%; transform: translateX(-50%); width: 290px; max-width: calc(100vw - 70px); padding-top: 9px; z-index: 25; }
 .point-0 .map-popup, .point-4 .map-popup { left: 0; transform: none; }
 .point-1 .map-popup, .point-3 .map-popup { left: auto; right: 0; transform: none; }
-.point-2 .map-popup, .point-3 .map-popup, .point-4 .map-popup, .point-5 .map-popup { top: auto; bottom: calc(100% - 3px); padding-top: 0; padding-bottom: 9px; }
+.point-7 .map-popup { left: auto; right: 0; transform: none; }
+.point-2 .map-popup, .point-3 .map-popup, .point-4 .map-popup, .point-5 .map-popup, .point-6 .map-popup, .point-7 .map-popup { top: auto; bottom: calc(100% - 3px); padding-top: 0; padding-bottom: 9px; }
 .map-popup .ping-card { padding: 17px; border-color: color-mix(in srgb, var(--pin) 65%, #243444); box-shadow: 0 16px 50px #02090eda, 0 0 0 1px #0b1728; border-radius: 12px; animation: none; }
 .map-popup .ping-card:hover { transform: none; }
 .map-popup .card-top { padding-right: 19px; }
@@ -155,24 +158,28 @@ body { background: radial-gradient(ellipse at 78% 0, #152c3b 0, transparent 55%)
 .map-popup .like-button { font-size: 11px; padding: 8px; }
 .map-popup .card-marker { display: none; }
 .map-popup-close { position: absolute; top: 17px; right: 9px; padding: 5px; z-index: 2; color: #9bb6c2; }
-.point-2 .map-popup-close, .point-3 .map-popup-close, .point-4 .map-popup-close, .point-5 .map-popup-close { top: 8px; }
+.point-2 .map-popup-close, .point-3 .map-popup-close, .point-4 .map-popup-close, .point-5 .map-popup-close, .point-6 .map-popup-close, .point-7 .map-popup-close { top: 8px; }
 .list-board .board-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
 .list-board .ping-card { padding: 18px; }
 .list-board .card-message { font-size: 14px; min-height: 72px; line-height: 1.8; }
 @keyframes map-pulse { 0%, 100% { opacity: .3; transform: scale(.85); } 50% { opacity: .65; transform: scale(1.1); } }
-@media (min-width: 1600px) { .map-point.point-5 { display: block; } }
-@media (max-width: 1250px) { .map-point.point-4 { display: none; } .list-board .board-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 1250px) { .list-board .board-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 767px) {
-  .compliment-map { height: 485px; }
+  .compliment-map { height: 530px; }
   .map-heading { top: 16px; left: 16px; }
   .map-heading > span { font-size: 11px; letter-spacing: 1px; }
   .map-heading small { font-size: 9px; }
   .map-compass { right: 14px; top: 17px; }
-  .map-point.point-0 { left: 24%; top: 27%; }
-  .map-point.point-1 { left: 76%; top: 33%; }
-  .map-point.point-2 { left: 29%; top: 67%; }
-  .map-point.point-3 { left: 76%; top: 76%; }
-  .point-2 .map-popup { left: 0; transform: none; }
+  .map-point.point-0 { left: 16%; top: 22%; }
+  .map-point.point-1 { left: 52%; top: 22%; }
+  .map-point.point-2 { left: 86%; top: 29%; }
+  .map-point.point-3 { left: 27%; top: 48%; }
+  .map-point.point-4 { left: 63%; top: 48%; }
+  .map-point.point-5 { left: 88%; top: 58%; }
+  .map-point.point-6 { left: 16%; top: 77%; }
+  .map-point.point-7 { left: 54%; top: 78%; }
+  .point-2 .map-popup, .point-5 .map-popup { right: 0; left: auto; transform: none; }
+  .point-6 .map-popup, .point-7 .map-popup { left: 0; transform: none; }
   .map-pin-name { max-width: 120px; }
   .map-popup { width: 265px; }
   .map-popup .card-message { max-height: 160px; }

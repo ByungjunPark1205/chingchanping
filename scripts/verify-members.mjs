@@ -31,7 +31,7 @@ const port = probe.address().port; await new Promise((r) => probe.close(r));
 const origin = `http://127.0.0.1:${port}`;
 let child, logs = "", checks = 0, passed = false;
 async function start() {
-  child = spawn(process.execPath, ["scripts/render-start.mjs"], { env: { ...process.env, PORT: String(port), RENDER_DISK_PATH: dataRoot, ADMIN_SETUP_TOKEN: "local-only-setup" }, stdio: ["ignore", "pipe", "pipe"] });
+  child = spawn(process.execPath, ["scripts/render-start.mjs"], { env: { ...process.env, PORT: String(port), RENDER_DISK_PATH: dataRoot, ADMIN_SETUP_TOKEN: "local-only-setup", SIGNUP_ALERT_TOKEN: "a".repeat(64) }, stdio: ["ignore", "pipe", "pipe"] });
   child.stdout.on("data", (s) => { logs += s; }); child.stderr.on("data", (s) => { logs += s; });
   for (let i = 0; i < 100; i++) {
     if (child.exitCode !== null) throw Error(logs);
@@ -66,6 +66,16 @@ try {
   let home = (await request("/home", null, applicant.cookie)).data;
   const applicantId = home.viewer.id;
   assert.equal(home.viewer.approvalStatus, "pending"); assert.equal(home.viewer.role, "member");
+  const alertHeaders = { Authorization: `Bearer ${"a".repeat(64)}` };
+  await request("/notifications/signups", null, null, 401);
+  await request("/notifications/signups", null, admin, 401);
+  await request("/notifications/signups", null, null, 401, { Authorization: `Bearer ${"b".repeat(64)}` });
+  await request(`/notifications/signups?token=${"a".repeat(64)}`, null, null, 401);
+  const alerts = (await request("/notifications/signups", null, null, 200, alertHeaders)).data;
+  assert.equal(alerts.pending.length, 1);
+  assert.deepEqual(Object.keys(alerts.pending[0]).sort(), ["chatNickname", "createdAt", "id"]);
+  assert.equal(alerts.pending[0].id, applicantId);
+  await request("/admin", null, null, 401, alertHeaders);
   assert.equal(home.members.some((u) => u.id === applicantId), false);
   assert.equal(home.stats.members, 5);
   await request(`/users/${applicantId}`, null, peer, 404);
@@ -76,6 +86,7 @@ try {
   await action("approve", applicantId, peer, 403);
   await action("approve", "admin", admin, 403); await action("deactivate", "admin", admin, 403);
   await action("approve", applicantId, admin);
+  assert.deepEqual((await request("/notifications/signups", null, null, 200, alertHeaders)).data.pending, []);
   assert.equal((await request("/home", null, applicant.cookie)).data.viewer.approvalStatus, "approved");
   await request("/compliments", message, applicant.cookie, 201);
   await action("approve", applicantId, admin, 409);
@@ -141,9 +152,14 @@ try {
   assert.equal(adminData.actions.filter((a) => a.action === "merge").length, 1);
   // Keep one new applicant available for optional local UI verification.
   const pending = await request("/auth/register", { chatNickname: "새로운가입자", password: pass }, null, 201);
-  const pendingId = (await request("/home", null, pending.cookie)).data.viewer.id;
+  const notificationPendingId = (await request("/home", null, pending.cookie)).data.viewer.id;
+  await action("deactivate", notificationPendingId, admin);
+  assert.deepEqual((await request("/notifications/signups", null, null, 200, alertHeaders)).data.pending, []);
+  await action("activate", notificationPendingId, admin);
+  const pendingLogin = await request("/auth/login", { chatNickname: "새로운가입자", password: pass });
+  const pendingId = (await request("/home", null, pendingLogin.cookie)).data.viewer.id;
   await request("/admin/merge", { sourceId: "alternate", targetId: pendingId, sourceNickname: names.alternate, targetNickname: "새로운가입자" }, admin, 400);
-  await request("/admin/setup", { token: "local-only-setup" }, pending.cookie, 409);
+  await request("/admin/setup", { token: "local-only-setup" }, pendingLogin.cookie, 409);
   // Author identities are released only in the admin report queue, after a
   // recipient reports. The reporter and public/member feeds remain anonymous.
   insert("report-private", "peer", "target");
@@ -156,7 +172,7 @@ try {
   await request("/reports", reportBody, null, 401);
   await request("/reports", reportBody, peer, 403);
   await request("/reports", reportBody, admin, 403);
-  await request("/reports", reportBody, pending.cookie, 403);
+  await request("/reports", reportBody, pendingLogin.cookie, 403);
   await request("/reports", reportBody, targetLogin.cookie, 403, { Origin: "https://other.invalid" });
   await request("/reports", { ...reportBody, reason: "짧음" }, targetLogin.cookie, 400);
   await request("/reports", { ...reportBody, complimentId: "missing" }, targetLogin.cookie, 403);
