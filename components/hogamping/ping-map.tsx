@@ -6,7 +6,7 @@ import type { Ping } from "@/lib/types";
 import { PingCard } from "./cards";
 import { PingIcon } from "./visuals";
 
-type MapPlacement = { x: number; y: number; edge: "edge-left" | "edge-right" | "edge-top" | "edge-bottom" };
+type MapPlacement = { x: number; y: number; edge: string };
 
 function layoutSeed(value: string) {
   let hash = 2166136261;
@@ -63,10 +63,14 @@ export function PingMap({ pings, weeklyIds, example, onLike }: {
         if (candidates.every((candidate) => Math.hypot(candidate.x - x, candidate.y - y) >= spacing)) candidates.push({ x, y });
         attempts++;
       }
+      const popupWidth = width < 600 ? 265 : 290;
+      const popupHeight = width < 600 ? 255 : 300;
+      const horizontalInset = popupWidth / 2 + 16;
+      const bottomThreshold = height - popupHeight - 18;
       setPlacements(candidates.map(({ x, y }) => ({
         x,
         y,
-        edge: x < width * 0.24 ? "edge-left" : x > width * 0.76 ? "edge-right" : y < height * 0.34 ? "edge-top" : "edge-bottom",
+        edge: `${x < horizontalInset ? "edge-left" : x > width - horizontalInset ? "edge-right" : "edge-center"} ${y > bottomThreshold ? "edge-bottom" : "edge-top"}`,
       })));
     };
     updateLayout();
@@ -92,7 +96,7 @@ export function PingMap({ pings, weeklyIds, example, onLike }: {
             setPinnedId(null);
           };
           return (
-            <div key={ping.id} className={`map-point point-${index} ${placement.edge} ${open ? "is-open" : ""} ${rank ? "is-ranked" : ""}`} style={{ left: placement.x, top: placement.y }}
+            <div key={ping.id} className={`map-point point-${index} ${placement.edge} ${open ? "is-open" : ""} ${rank ? `is-ranked rank-${rank}` : ""}`} style={{ left: placement.x, top: placement.y }}
               onPointerEnter={(event) => { if (event.pointerType === "mouse") setOpenId(ping.id); }}
               onPointerLeave={(event) => {
                 if (event.pointerType === "mouse" && pinnedId !== ping.id && !event.currentTarget.contains(document.activeElement)) setOpenId(null);
@@ -110,7 +114,7 @@ export function PingMap({ pings, weeklyIds, example, onLike }: {
                   setPinnedId(next); setOpenId(next);
                 }}
               >
-                <span className="map-pin-symbol"><span className="map-pin-ripple" /><PingIcon size={45} />{rank > 0 && <span className="map-rank-badge">{rank}</span>}</span>
+                <span className="map-pin-symbol"><span className="map-pin-ripple" /><PingIcon size={45} />{rank > 0 && <span className="map-rank-badge">{rank <= 3 ? `${rank}위` : rank}</span>}</span>
                 <span className="map-pin-name"><b>{ping.receiver.chatNickname}</b>님에게</span>
               </button>
               {open && (

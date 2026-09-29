@@ -132,21 +132,28 @@ body { background: radial-gradient(ellipse at 78% 0, #152c3b 0, transparent 55%)
 .map-point.point-5 { --pin: #77acd9; }
 .map-point.point-6 { --pin: #d9a875; }
 .map-point.point-7 { --pin: #8bc7bb; }
+.map-point.rank-1 { --pin: #f3ca61; }
+.map-point.rank-2 { --pin: #d7e4ed; }
+.map-point.rank-3 { --pin: #dfaa7c; }
 .map-pin { width: 100%; padding: 5px 0 12px; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--pin); background: transparent; border: 0; border-radius: 12px; }
 .map-pin:focus-visible { outline-color: var(--pin); outline-offset: 4px; }
 .map-pin-symbol { position: relative; display: grid; place-items: center; height: 57px; width: 68px; transition: transform .2s ease; }
 .map-pin-symbol > svg { filter: drop-shadow(0 0 8px color-mix(in srgb, var(--pin) 55%, transparent)); position: relative; z-index: 1; }
 .map-pin-symbol > svg path { fill: #0e2936; fill-opacity: .95; stroke-width: 1.8px; }
 .map-pin:hover .map-pin-symbol, .map-pin[aria-expanded="true"] .map-pin-symbol { transform: translateY(-4px); }
+.rank-1 .map-pin-symbol > svg { transform: scale(1.36); }
+.rank-2 .map-pin-symbol > svg { transform: scale(1.24); }
+.rank-3 .map-pin-symbol > svg { transform: scale(1.14); }
 .map-pin-ripple { position: absolute; bottom: 7px; width: 65px; height: 20px; border: 1px solid var(--pin); border-radius: 50%; opacity: .45; box-shadow: 0 0 16px color-mix(in srgb, var(--pin) 30%, transparent); animation: map-pulse 4s ease-in-out infinite; }
 .point-1 .map-pin-ripple, .point-4 .map-pin-ripple { animation-delay: 1.5s; }
 .point-2 .map-pin-ripple, .point-5 .map-pin-ripple { animation-delay: 3s; }
-.map-rank-badge { position: absolute; top: 1px; right: 7px; width: 18px; height: 18px; display: grid; place-items: center; font-size: 10px; font-weight: 600; line-height: 1; background: #12232d; border: 1px solid var(--pin); color: var(--pin); border-radius: 50%; z-index: 2; }
+.map-rank-badge { position: absolute; top: 1px; right: 7px; min-width: 18px; height: 18px; padding: 0 3px; display: grid; place-items: center; font-size: 10px; font-weight: 600; line-height: 1; background: #12232d; border: 1px solid var(--pin); color: var(--pin); border-radius: 50%; z-index: 2; }
+.rank-1 .map-rank-badge, .rank-2 .map-rank-badge, .rank-3 .map-rank-badge { top: -3px; right: 1px; min-width: 31px; height: 25px; padding: 0 5px; border-width: 2px; border-radius: 999px; font-size: 12px; font-weight: 800; box-shadow: 0 0 14px color-mix(in srgb, var(--pin) 50%, transparent); }
 .map-pin-name { max-width: 150px; min-width: 78px; border: 1px solid #3c686b99; background: #091c27e8; padding: 4px 9px; border-radius: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #91aebc; font-size: 11px; box-shadow: 0 4px 14px #0004; }
 .map-pin-name b { color: #d5e9ec; font-weight: 500; margin-right: 3px; }
-.map-popup { position: absolute; top: calc(100% - 3px); left: 50%; transform: translateX(-50%); width: 290px; max-width: calc(100vw - 70px); padding-top: 9px; z-index: 25; }
-.edge-left .map-popup { left: 0; transform: none; }
-.edge-right .map-popup { left: auto; right: 0; transform: none; }
+.map-popup { position: absolute; top: calc(100% - 3px); left: 50%; transform: translateX(-50%); width: 290px; max-width: min(290px, calc(100vw - 32px)); padding-top: 9px; z-index: 25; }
+.edge-left .map-popup { left: 55px; transform: none; }
+.edge-right .map-popup { left: auto; right: 55px; transform: none; }
 .edge-bottom .map-popup { top: auto; bottom: calc(100% - 3px); padding-top: 0; padding-bottom: 9px; }
 .map-popup .ping-card { padding: 17px; border-color: color-mix(in srgb, var(--pin) 65%, #243444); box-shadow: 0 16px 50px #02090eda, 0 0 0 1px #0b1728; border-radius: 12px; animation: none; }
 .map-popup .ping-card:hover { transform: none; }
