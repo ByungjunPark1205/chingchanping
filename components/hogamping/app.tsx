@@ -247,7 +247,7 @@ export function Chingchanping({
       setViewer(null);
       setPrivatePings([]);
       await refresh();
-      toast("다음 게임에서 또 만나요.");
+      toast("로그아웃했어요.");
     } catch (e) {
       toast.error((e as Error).message);
     }
@@ -312,7 +312,7 @@ export function Chingchanping({
                 <Avatar name={viewer.chatNickname} index={viewer.avatar} />
                 <span>
                   {viewer.chatNickname}
-                  <small>칭찬핑 탐지 중</small>
+                  <small>로그인 중</small>
                 </span>
               </Link>
               <button aria-label="로그아웃" onClick={logout}>
@@ -330,7 +330,7 @@ export function Chingchanping({
       <div className="main-wrap">
         <header className="topbar">
           <div className="topbar-context">
-            <PingIcon size={18} /> 함께 만드는, 서로를 칭찬하는 커뮤니티
+            <PingIcon size={18} /> 게임 커뮤니티를 위한 익명 칭찬 서비스
           </div>
           <Link className="mobile-brand" href="/">
             <PingMark />
@@ -399,10 +399,10 @@ export function Chingchanping({
               <PingMark />
               <h1>
                 {page === "received"
-                  ? "나에게 도착한 마음을 열어볼까요?"
-                  : "우리 아지트에 들어오세요"}
+                  ? "받은 칭찬을 확인하려면 로그인해주세요"
+                  : "로그인이 필요해요"}
               </h1>
-              <p>톡방 닉네임으로 로그인하고 칭찬핑을 이어가세요.</p>
+              <p>가입할 때 사용한 톡방 닉네임과 비밀번호를 입력해주세요.</p>
               <button
                 className="primary-button"
                 onClick={() => setAuth("login")}
@@ -413,24 +413,22 @@ export function Chingchanping({
                 className="text-button"
                 onClick={() => setAuth("register")}
               >
-                처음 오셨나요? 내 핑 등록하기
+                계정이 없나요? 가입하기
               </button>
             </div>
           )}
           {page === "received" && viewer && (
             <>
               <PageHeading
-                eyebrow="함께한 순간, 고마웠던 행동"
                 title="내가 받은 칭찬핑"
-                description="누군가 당신의 좋은 행동을 발견했어요."
+                description="나에게 남겨진 칭찬을 확인해보세요."
               />
               <div className="inbox-banner">
                 <PingMark />
                 <p>
-                  <b>{viewer.chatNickname}님, 당신 덕분이에요.</b>
+                  <b>{viewer.chatNickname}님이 받은 칭찬</b>
                   <span>
-                    함께한 순간들이 {viewer.count}개의 따뜻한 마음으로
-                    돌아왔어요.
+                    지금까지 {viewer.count}개의 칭찬을 받았어요.
                   </span>
                 </p>
                 <strong>
@@ -463,7 +461,7 @@ export function Chingchanping({
                     />
                     <div>
                       <div className="eyebrow">
-                        우리 아지트의 소중한 한 사람
+                        회원 프로필
                       </div>
                       <h1>{profile.chatNickname}</h1>
                       {profile.lolNickname && <p>
@@ -492,7 +490,7 @@ export function Chingchanping({
                     </Link>
                   )}
                   <h2 className="section-title">
-                    {profile.chatNickname}님에게 도착한 마음
+                    {profile.chatNickname}님이 받은 칭찬
                   </h2>
                   <PingCollection pings={privatePings} onLike={like} />
                 </>
@@ -521,8 +519,8 @@ export function Chingchanping({
           )}
           {page === "notfound" && (
             <Empty
-              title="여기엔 아무도 와드를 박지 않았네요."
-              text="길을 잃었어도 괜찮아요. 아지트로 돌아가볼까요?"
+              title="페이지를 찾을 수 없어요"
+              text="주소를 확인하거나 홈으로 이동해주세요."
             >
               <Link className="primary-button" href="/">
                 홈으로 돌아가기
@@ -531,11 +529,8 @@ export function Chingchanping({
           )}
         </main>
         <footer className="main-footer">
-          <span>좋은 행동을 알아보고, 서로를 더 존중하도록.</span>
-          <span>
-            CHINGCHANPING <span className="footer-dot">·</span> 서로에게 다정한
-            플레이
-          </span>
+          <span>게임 커뮤니티를 위한 익명 칭찬 서비스</span>
+          <span>CHINGCHANPING</span>
         </footer>
       </div>
       <nav className="mobile-nav" aria-label="모바일 주 메뉴">
@@ -578,22 +573,22 @@ export function Chingchanping({
       <ReportDialog key={report?.id ?? "closed"} ping={report} onClose={() => setReport(null)} />
       <Dialog open={guide} onOpenChange={setGuide}>
         <DialogContent className="hogam-dialog">
-          <DialogTitle>칭찬핑, 이렇게 찍어요</DialogTitle>
+          <DialogTitle>칭찬핑 이용 안내</DialogTitle>
           <DialogDescription>
-            좋은 행동을 발견했다면, 구체적인 칭찬으로 알려주세요.
+            칭찬할 사람을 선택하고, 어떤 점이 좋았는지 적어주세요.
           </DialogDescription>
           <div className="guide-steps">
             <p>
               <b>01</b>
-              <span>톡방 닉네임으로 내 핑 등록하기</span>
+              <span>톡방 닉네임으로 가입하기</span>
             </p>
             <p>
               <b>02</b>
-              <span>고마웠던 사람을 찾아 선택하기</span>
+              <span>칭찬할 사람 검색하기</span>
             </p>
             <p>
               <b>03</b>
-              <span>구체적인 행동을 떠올려 칭찬 남기기</span>
+              <span>칭찬 내용 작성하고 보내기</span>
             </p>
           </div>
           <div className="privacy-note">
@@ -605,13 +600,13 @@ export function Chingchanping({
           </div>
           <p className="muted">
             한 사람에게는 1분에 한 번, 하루 3번까지, 전체 하루 10번까지 보낼 수
-            있어요. 고마웠던 행동을 떠올리며 마음을 전해주세요.
+            있어요.
           </p>
           <button
             className="primary-button full"
             onClick={() => setGuide(false)}
           >
-            좋아요, 핑 찍으러 갈게요
+            확인
           </button>
         </DialogContent>
       </Dialog>
@@ -659,8 +654,8 @@ function HomeBoard({
         <blockquote>“남을 찬양하면 자신에게 돌아온다. 사람이란 자신을 칭찬하는 사람을 칭찬하고 싶어한다.” <cite>— 괴테 (독일 시인)</cite></blockquote>
       </figure>
       <PageHeading
-        title="오늘도, 칭찬핑"
-        description="좋은 행동을 발견했다면, 칭찬핑을 찍어주세요."
+        title="칭찬핑"
+        description="함께한 사람에게 칭찬을 남겨보세요."
       >
         <Link className="primary-button" href="/send">
           <PingIcon size={19} />
@@ -672,7 +667,7 @@ function HomeBoard({
         <div className="board-toolbar">
           <div className="board-title">
             <span className="live-dot" />
-            <h2>우리 커뮤니티에 도착한 칭찬핑</h2>
+            <h2>커뮤니티 칭찬</h2>
             <span className="board-total">{stats.pings}</span>
           </div>
           <div className="board-controls">
@@ -696,7 +691,7 @@ function HomeBoard({
               aria-label="보드 보기 방식"
             >
               <button
-                aria-label="공간으로 보기"
+                aria-label="지도로 보기"
                 aria-pressed={mode === "space"}
                 className={mode === "space" ? "selected" : ""}
                 onClick={() => setMode("space")}
@@ -742,14 +737,14 @@ function HomeBoard({
         {!loading && !error && !isExample && filtered.length > 0 && (
           <p className="feed-description">
             {weeklyPings.length > 0
-              ? "이번 주 공감을 많이 받은 칭찬 최대 3개와 최신 칭찬을 모았어요. 공감 순위는 매주 월요일 0시(한국 시간)에 새로 시작해요."
-              : "최근에 도착한 칭찬부터 보여드려요."}
+              ? "이번 주 공감 상위 3개와 최근 칭찬입니다. 순위는 매주 월요일 0시(한국 시간)에 초기화돼요."
+              : "최근 등록된 칭찬부터 표시합니다."}
           </p>
         )}
         {isExample && (
           <div className="example-label">
             <Sparkles size={13} />
-            <span>첫 칭찬핑을 기다리는 중이에요. 아래는 칭찬 예시입니다.</span>
+            <span>아직 등록된 칭찬이 없어 예시를 표시하고 있어요.</span>
           </div>
         )}
         <div
@@ -763,13 +758,13 @@ function HomeBoard({
             <Empty
               title={
                 appliedRange
-                  ? "선택한 기간에 도착한 칭찬이 없어요."
+                  ? "선택한 기간에 등록된 칭찬이 없어요."
                   : undefined
               }
-              text="고마웠던 한 사람에게 칭찬을 남겨보세요."
+              text="다른 기간을 선택하거나 새로운 칭찬을 남겨보세요."
             >
               <Link className="secondary-button" href="/send">
-                사람 찾으러 가기 <ArrowRight size={16} />
+                칭찬 보내기 <ArrowRight size={16} />
               </Link>
             </Empty>
           ) : mode === "space" ? (
@@ -800,11 +795,11 @@ function HomeBoard({
         <div className="board-legend">
           <span>
             <span className="live-dot" />
-            좋은 행동이 발견된 순간, 핑이 켜져요.
+            핑 하나에 칭찬 하나가 표시돼요.
           </span>
           <span>
             <LockKeyhole size={13} />
-            보내는 칭찬은 익명으로
+            작성자 비공개
           </span>
         </div>
       </section>
@@ -814,21 +809,20 @@ function HomeBoard({
             <Users size={23} />
           </div>
           <div>
-            <b>같이 만드는 따뜻한 아지트</b>
+            <b>커뮤니티 현황</b>
             <p>
-              <strong>{stats.members}</strong>명의 우리 <span>·</span> 오고 간
-              마음 <strong>{stats.pings}</strong>개
+              회원 <strong>{stats.members}</strong>명 <span>·</span> 칭찬 <strong>{stats.pings}</strong>개
             </p>
           </div>
           <div className="today-stat">
-            <span>오늘 도착한 핑</span>
-            <b>+{stats.today}</b>
+            <span>오늘 등록</span>
+            <b>{stats.today}개</b>
           </div>
         </div>
         <button className="home-guide" onClick={onGuide}>
           <div>
-            <span>처음 오셨나요?</span>
-            <b>칭찬핑은 이렇게 찍어요</b>
+            <span>이용 안내</span>
+            <b>칭찬 보내는 방법</b>
           </div>
           <span className="round-arrow">
             <ArrowRight size={19} />
@@ -862,15 +856,14 @@ function MemberDirectory({
   return (
     <>
       <PageHeading
-        eyebrow="함께하는 사람의 좋은 점을 발견해요"
-        title="누구에게 핑을 찍을까요?"
-        description="오늘 함께해서 고마웠던 사람을 찾아보세요."
+        title="칭찬할 사람 찾기"
+        description="칭찬을 보낼 회원을 선택해주세요."
       />
       <div className="search-box">
         <Search size={21} />
         <input
           aria-label="톡방 닉네임 또는 게임 닉네임 검색"
-          placeholder="톡방 닉네임이나 게임 닉네임으로 찾아보세요"
+          placeholder="톡방 닉네임 또는 게임 닉네임 검색"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -885,9 +878,9 @@ function MemberDirectory({
       </div>
       <div className="directory-info">
         <span>
-          탐지된 멤버 <b>{filtered.length}</b>명
+          회원 <b>{filtered.length}</b>명
         </span>
-        <span>가나다순으로 보여드려요</span>
+        <span>닉네임 가나다순</span>
       </div>
       {loading ? (
         <Loading />
@@ -895,13 +888,13 @@ function MemberDirectory({
         <Empty
           title={
             query
-              ? "이 구역에서는 해당 유저가 탐지되지 않습니다."
-              : "아직 함께할 멤버를 기다리고 있어요."
+              ? "검색 결과가 없어요"
+              : "아직 칭찬을 보낼 회원이 없어요"
           }
           text={
             query
               ? "닉네임을 조금 다르게 검색해보세요."
-              : "우리 커뮤니티 멤버들이 등록하면 이곳에 나타나요."
+              : "다른 회원이 가입하면 여기에 표시돼요."
           }
         />
       ) : (

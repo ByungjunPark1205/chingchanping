@@ -3,7 +3,7 @@ import { useState } from "react";
 import Link from "./link";
 import { ArrowDown, Flag, ThumbsUp } from "lucide-react";
 import { time } from "@/lib/format";
-import type { Ping } from "@/lib/types";
+import { categoryLabel, type Ping } from "@/lib/types";
 import { Avatar, PingMark, PingIcon } from "./visuals";
 import { Empty, Loading } from "./common";
 
@@ -34,7 +34,7 @@ export function PingCard({
       <div className="card-top">
         <span className="card-category">
           <ThumbsUp size={12} />
-          {ping.category}
+          {categoryLabel(ping.category)}
         </span>
         <span className="card-time">
           {example ? "예시" : time(ping.createdAt)}

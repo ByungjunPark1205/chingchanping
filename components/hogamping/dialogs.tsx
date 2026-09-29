@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Check, Eye, EyeOff, Flag, ThumbsUp, Loader2, LockKeyhole } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/client";
-import { categories, type Member, type Ping } from "@/lib/types";
+import { categories, categoryLabel, type Member, type Ping } from "@/lib/types";
 import { Avatar, PingMark, PingIcon } from "./visuals";
 import {
   Dialog,
@@ -41,8 +41,8 @@ export function AuthDialog({
       await onSuccess();
       toast.success(
         mode === "register"
-          ? "칭찬핑 탐지 준비 완료."
-          : "다시 만나서 반가워요!",
+          ? "가입이 완료됐어요."
+          : "로그인했어요.",
       );
     } catch (e) {
       setError((e as Error).message);
@@ -61,13 +61,13 @@ export function AuthDialog({
         <PingMark />
         <DialogTitle>
           {mode === "register"
-            ? "내 핑을 등록해볼까요?"
-            : "우리 아지트에 오신 걸 환영해요"}
+            ? "회원가입"
+            : "로그인"}
         </DialogTitle>
         <DialogDescription>
           {mode === "register"
-            ? "우리 커뮤니티에서 사용하는 닉네임으로 등록하세요."
-            : "우리 커뮤니티에 도착한 칭찬을 확인해보세요."}
+            ? "톡방에서 사용하는 닉네임과 비밀번호를 입력해주세요."
+            : "가입할 때 사용한 닉네임과 비밀번호를 입력해주세요."}
         </DialogDescription>
         <form onSubmit={submit} key={mode}>
           <label>
@@ -126,7 +126,7 @@ export function AuthDialog({
             ) : (
               <PingIcon size={18} />
             )}{" "}
-            {mode === "register" ? "칭찬핑 등록하기" : "로그인하기"}
+            {mode === "register" ? "가입하기" : "로그인하기"}
           </button>
         </form>
         <button
@@ -134,12 +134,12 @@ export function AuthDialog({
           onClick={() => setMode(mode === "login" ? "register" : "login")}
         >
           {mode === "login"
-            ? "처음 오셨나요? 내 핑 등록하기"
-            : "이미 등록했나요? 로그인하기"}
+            ? "계정이 없나요? 가입하기"
+            : "이미 가입했나요? 로그인하기"}
         </button>
         <p className="auth-notice">
           <LockKeyhole size={13} />
-          칭찬을 보내는 당신의 이름은 공개되지 않아요.
+          칭찬 작성자는 다른 회원에게 공개되지 않아요.
         </p>
       </DialogContent>
     </Dialog>
@@ -191,14 +191,12 @@ export function ComposeDialog({
               <PingMark animate />
               <Check size={23} />
             </div>
-            <DialogTitle className="center">칭찬핑 전송 완료!</DialogTitle>
+            <DialogTitle className="center">칭찬을 보냈어요</DialogTitle>
             <DialogDescription className="center">
               {member?.chatNickname}님에게 칭찬핑을 보냈어요.
-              <br />
-              당신이 발견한 좋은 행동이 칭찬으로 전해졌어요.
             </DialogDescription>
             <button className="primary-button full" onClick={onClose}>
-              핑 찍었습니다. <ThumbsUp size={17} />
+              확인 <ThumbsUp size={17} />
             </button>
           </>
         ) : (
@@ -209,13 +207,13 @@ export function ComposeDialog({
                 index={member?.avatar}
                 large
               />
-              <div className="eyebrow">좋은 행동을 발견한 순간</div>
+              <div className="eyebrow">받는 사람</div>
             </div>
             <DialogTitle>
               {member?.chatNickname}님에게 칭찬핑 보내기
             </DialogTitle>
             <DialogDescription>
-              이 사람이 했던 좋은 행동을 남겨주세요.
+              어떤 행동이 좋았는지 구체적으로 적어주세요.
             </DialogDescription>
             <form onSubmit={submit}>
               <div className="category-picker">
@@ -233,7 +231,7 @@ export function ComposeDialog({
                       key={c}
                     >
                       <RadioGroupItem id={`category-${i}`} value={c} />
-                      {c}
+                      {categoryLabel(c)}
                     </label>
                   ))}
                 </RadioGroup>
@@ -248,7 +246,7 @@ export function ComposeDialog({
                 maxLength={300}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="처음 들어왔을 때 먼저 게임 같이 하자고 해줘서 고마웠어요 :)"
+                placeholder="예: 처음 하는 게임이었는데 진행 방법을 차근차근 알려줘서 고마웠어요."
                 disabled={phase === "sending"}
               />
               <div className="textarea-footer">
@@ -272,7 +270,7 @@ export function ComposeDialog({
                 ) : (
                   <PingIcon size={18} />
                 )}{" "}
-                {phase === "sending" ? "칭찬을 전하는 중…" : "칭찬핑 보내기"}
+                {phase === "sending" ? "보내는 중…" : "칭찬핑 보내기"}
               </button>
               <p className="form-hint">
                 한 사람에게 하루 3번 · 전체 하루 10번까지

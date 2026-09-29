@@ -29,7 +29,7 @@ export function PingMap({ pings, weeklyIds, example, onLike }: {
   return (
     <div className="compliment-map" ref={mapRef}>
       <div className="rift-landscape" aria-hidden="true"><RiftLandscape /></div>
-      <div className="map-heading"><span>우리의 칭찬 협곡</span><small>작은 핑 하나, 좋은 행동의 흔적</small></div>
+      <div className="map-heading"><span>칭찬 지도</span></div>
       <span className="map-compass" aria-hidden="true"><Compass size={28} /><small>N</small></span>
       <div className="map-points">
         {pings.slice(0, 6).map((ping, index) => {

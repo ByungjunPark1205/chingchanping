@@ -52,7 +52,7 @@ export async function currentUser(req: Request) {
 }
 export async function requireUser(req: Request) {
   const u = await currentUser(req);
-  return u ?? fail(401, "로그인하고 마음을 전해주세요.");
+  return u ?? fail(401, "로그인 후 이용해주세요.");
 }
 export async function requireAdmin(req: Request) {
   const u = await requireUser(req);
@@ -117,7 +117,7 @@ export async function rateLimit(key: string, max: number, windowMs: number) {
     now + windowMs,
   );
   if (!item || item.count > max)
-    fail(429, "잠깐 쉬어갈까요? 시도가 많아 잠시 후 다시 이용해주세요.");
+    fail(429, "요청이 많아요. 잠시 후 다시 시도해주세요.");
 }
 export async function ipKey(req: Request) {
   return digest(req.headers.get("cf-connecting-ip") ?? "local-preview");

@@ -225,11 +225,11 @@ async function post(req: Request) {
   if (path === "/compliments") {
     const receiverId = clean(body.receiverId, "받는 사람", 64);
     const message = clean(body.message, "칭찬 메시지", 300, 5);
-    const category = clean(body.category, "마음", 30);
+    const category = clean(body.category, "칭찬 유형", 30);
     if (!categories.includes(category))
-      fail(400, "마음의 종류를 선택해주세요.");
+      fail(400, "칭찬 유형을 선택해주세요.");
     if (receiverId === user.id)
-      fail(400, "내 마음은 다른 사람에게 전해주세요.");
+      fail(400, "자신에게는 칭찬을 보낼 수 없어요. 다른 회원을 선택해주세요.");
     if (!(await member(receiverId))) fail(404, "해당 사용자를 찾을 수 없어요.");
     const id = crypto.randomUUID();
     const day = startOfSeoulDay(now);
@@ -256,7 +256,7 @@ async function post(req: Request) {
     if (!result.meta.changes)
       fail(
         429,
-        "한 사람에게 1분에 한 번, 하루 3번까지, 전체 하루 10번까지 보낼 수 있어요. 잠시 후 마음을 전해주세요.",
+        "전송 횟수 제한에 도달했어요. 한 사람에게 1분에 한 번, 하루 3번까지, 전체 하루 10번까지 보낼 수 있어요.",
       );
     return json({ ok: true, id }, 201);
   }

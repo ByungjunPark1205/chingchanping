@@ -29,13 +29,13 @@ export function Loading() {
   return (
     <div className="loading-state" role="status">
       <Loader2 className="spin" size={23} />
-      칭찬핑을 탐지하고 있어요.
+      불러오는 중…
     </div>
   );
 }
 export function Empty({
-  title = "아직 탐지된 칭찬핑이 없습니다.",
-  text = "함께할 좋은 순간들이 차곡차곡 쌓이고 있어요.",
+  title = "아직 받은 칭찬이 없어요",
+  text = "받은 칭찬은 여기에 표시돼요.",
   children,
 }: {
   title?: string;

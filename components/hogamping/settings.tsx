@@ -25,9 +25,8 @@ export function SettingsView({
   return (
     <>
       <PageHeading
-        eyebrow="MAKE YOURSELF AT HOME"
         title="설정"
-        description="우리 아지트에서 조금 더 편안하게."
+        description="프로필과 화면 표시, 비밀번호를 관리해요."
       />
       <div className="settings-layout">
         <section className="settings-panel">
@@ -80,11 +79,11 @@ export function SettingsView({
           </form>
         </section>
         <section className="settings-panel">
-          <h2>내게 맞는 아지트</h2>
+          <h2>화면 및 계정</h2>
           <div className="setting-row">
             <label htmlFor="motion">
               <b>핑 애니메이션</b>
-              <span>작은 파동과 빛으로 마음을 전해요.</span>
+              <span>지도의 핑에 움직임 효과를 표시해요.</span>
             </label>
             <Switch id="motion" checked={motion} onCheckedChange={setMotion} />
           </div>

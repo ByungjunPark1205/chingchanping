@@ -93,7 +93,7 @@ export function AdminView({
         <PageHeading
           eyebrow="COMMUNITY CARE"
           title="운영자 공간"
-          description="커뮤니티의 좋은 분위기를 함께 지켜요."
+          description="신고 내역과 칭찬, 회원을 관리해요."
         />
         <section className="settings-panel setup-panel">
           <ShieldCheck size={30} />
@@ -149,7 +149,7 @@ export function AdminView({
       <PageHeading
         eyebrow="COMMUNITY CARE"
         title="운영자 공간"
-        description="좋은 마음이 안전하게 오갈 수 있도록."
+        description="신고 내역과 칭찬, 회원을 관리해요."
       />
       {error && (
         <div className="error-banner">
@@ -172,7 +172,7 @@ export function AdminView({
             {data.reports.length === 0 ? (
               <Empty
                 title="접수된 신고가 없어요"
-                text="서로에게 다정한 아지트를 만들어주셔서 감사해요."
+                text="신고가 접수되면 여기에 표시돼요."
               />
             ) : (
               data.reports.map((r) => (
