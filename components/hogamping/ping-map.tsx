@@ -6,6 +6,19 @@ import type { Ping } from "@/lib/types";
 import { PingCard } from "./cards";
 import { PingIcon } from "./visuals";
 
+type MapPlacement = { x: number; y: number; edge: "edge-left" | "edge-right" | "edge-top" | "edge-bottom" };
+
+function layoutSeed(value: string) {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i++) hash = Math.imul(hash ^ value.charCodeAt(i), 16777619);
+  return hash >>> 0;
+}
+
+function randomUnit(seed: number) {
+  const value = Math.sin(seed * 12.9898) * 43758.5453;
+  return value - Math.floor(value);
+}
+
 export function PingMap({ pings, weeklyIds, example, onLike }: {
   pings: Ping[];
   weeklyIds: string[];
@@ -14,7 +27,7 @@ export function PingMap({ pings, weeklyIds, example, onLike }: {
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [pinnedId, setPinnedId] = useState<string | null>(null);
-  const [visibleCount, setVisibleCount] = useState(8);
+  const [placements, setPlacements] = useState<MapPlacement[]>([]);
   const mapRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const outside = (event: PointerEvent) => {
@@ -29,16 +42,38 @@ export function PingMap({ pings, weeklyIds, example, onLike }: {
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    const updateCapacity = () => {
-      const columns = Math.max(1, Math.floor((map.clientWidth - 36) / 130));
-      const rows = Math.max(1, Math.floor((map.clientHeight - 104) / 112));
-      setVisibleCount(Math.min(pings.length, columns * rows));
+    const updateLayout = () => {
+      const width = map.clientWidth;
+      const height = map.clientHeight;
+      const horizontalPadding = width < 600 ? 50 : 74;
+      const topPadding = 86;
+      const bottomPadding = 52;
+      const availableWidth = Math.max(110, width - horizontalPadding * 2);
+      const availableHeight = Math.max(112, height - topPadding - bottomPadding);
+      const spacing = width < 600 ? 130 : 145;
+      const columns = Math.max(1, Math.floor(availableWidth / spacing));
+      const rows = Math.max(1, Math.floor(availableHeight / spacing));
+      const capacity = Math.min(pings.length, columns * rows);
+      const seed = layoutSeed(pings.map((ping) => ping.id).join("|"));
+      const candidates: Array<{ x: number; y: number }> = [];
+      let attempts = 0;
+      while (candidates.length < capacity && attempts < capacity * 500) {
+        const x = horizontalPadding + randomUnit(seed + attempts * 2 + 1) * availableWidth;
+        const y = topPadding + randomUnit(seed + attempts * 2 + 2) * availableHeight;
+        if (candidates.every((candidate) => Math.hypot(candidate.x - x, candidate.y - y) >= spacing)) candidates.push({ x, y });
+        attempts++;
+      }
+      setPlacements(candidates.map(({ x, y }) => ({
+        x,
+        y,
+        edge: x < width * 0.24 ? "edge-left" : x > width * 0.76 ? "edge-right" : y < height * 0.34 ? "edge-top" : "edge-bottom",
+      })));
     };
-    updateCapacity();
-    const observer = new ResizeObserver(updateCapacity);
+    updateLayout();
+    const observer = new ResizeObserver(updateLayout);
     observer.observe(map);
     return () => observer.disconnect();
-  }, [pings.length]);
+  }, [pings]);
 
   return (
     <div className="compliment-map" ref={mapRef}>
@@ -46,7 +81,8 @@ export function PingMap({ pings, weeklyIds, example, onLike }: {
       <div className="map-heading"><span>칭찬 지도</span></div>
       <span className="map-compass" aria-hidden="true"><Compass size={28} /><small>N</small></span>
       <div className="map-points">
-        {pings.slice(0, visibleCount).map((ping, index) => {
+        {pings.slice(0, placements.length).map((ping, index) => {
+          const placement = placements[index];
           const open = openId === ping.id;
           const rank = weeklyIds.indexOf(ping.id) + 1;
           const popupId = `map-compliment-${ping.id}`;
@@ -56,7 +92,7 @@ export function PingMap({ pings, weeklyIds, example, onLike }: {
             setPinnedId(null);
           };
           return (
-            <div key={ping.id} className={`map-point point-${index} ${open ? "is-open" : ""} ${rank ? "is-ranked" : ""}`}
+            <div key={ping.id} className={`map-point point-${index} ${placement.edge} ${open ? "is-open" : ""} ${rank ? "is-ranked" : ""}`} style={{ left: placement.x, top: placement.y }}
               onPointerEnter={(event) => { if (event.pointerType === "mouse") setOpenId(ping.id); }}
               onPointerLeave={(event) => {
                 if (event.pointerType === "mouse" && pinnedId !== ping.id && !event.currentTarget.contains(document.activeElement)) setOpenId(null);

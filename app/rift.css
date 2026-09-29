@@ -121,8 +121,8 @@ body { background: radial-gradient(ellipse at 78% 0, #152c3b 0, transparent 55%)
 .map-heading small { color: #668f98; font-size: 10px; letter-spacing: .3px; }
 .map-compass { position: absolute; top: 22px; right: 24px; color: #88b1b18c; display: grid; place-items: center; }
 .map-compass small { font-size: 8px; margin-top: 3px; }
-.map-points { position: absolute; inset: 58px 18px 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); grid-auto-rows: 112px; align-content: space-evenly; gap: 8px; overflow: visible; }
-.map-point { --pin: #69d2da; position: relative; width: 110px; margin: 0 auto; z-index: 2; }
+.map-points { position: absolute; inset: 0; overflow: visible; }
+.map-point { --pin: #69d2da; position: absolute; width: 110px; margin-left: -55px; margin-top: -40px; z-index: 2; }
 .map-point.is-open { z-index: 20; }
 .map-point.point-0 { --pin: #dfc485; }
 .map-point.point-1 { --pin: #8fb6f1; }
@@ -145,10 +145,9 @@ body { background: radial-gradient(ellipse at 78% 0, #152c3b 0, transparent 55%)
 .map-pin-name { max-width: 150px; min-width: 78px; border: 1px solid #3c686b99; background: #091c27e8; padding: 4px 9px; border-radius: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #91aebc; font-size: 11px; box-shadow: 0 4px 14px #0004; }
 .map-pin-name b { color: #d5e9ec; font-weight: 500; margin-right: 3px; }
 .map-popup { position: absolute; top: calc(100% - 3px); left: 50%; transform: translateX(-50%); width: 290px; max-width: calc(100vw - 70px); padding-top: 9px; z-index: 25; }
-.point-0 .map-popup, .point-4 .map-popup { left: 0; transform: none; }
-.point-1 .map-popup, .point-3 .map-popup { left: auto; right: 0; transform: none; }
-.point-7 .map-popup { left: auto; right: 0; transform: none; }
-.point-2 .map-popup, .point-3 .map-popup, .point-4 .map-popup, .point-5 .map-popup, .point-6 .map-popup, .point-7 .map-popup { top: auto; bottom: calc(100% - 3px); padding-top: 0; padding-bottom: 9px; }
+.edge-left .map-popup { left: 0; transform: none; }
+.edge-right .map-popup { left: auto; right: 0; transform: none; }
+.edge-bottom .map-popup { top: auto; bottom: calc(100% - 3px); padding-top: 0; padding-bottom: 9px; }
 .map-popup .ping-card { padding: 17px; border-color: color-mix(in srgb, var(--pin) 65%, #243444); box-shadow: 0 16px 50px #02090eda, 0 0 0 1px #0b1728; border-radius: 12px; animation: none; }
 .map-popup .ping-card:hover { transform: none; }
 .map-popup .card-top { padding-right: 19px; }
@@ -158,7 +157,7 @@ body { background: radial-gradient(ellipse at 78% 0, #152c3b 0, transparent 55%)
 .map-popup .like-button { font-size: 11px; padding: 8px; }
 .map-popup .card-marker { display: none; }
 .map-popup-close { position: absolute; top: 17px; right: 9px; padding: 5px; z-index: 2; color: #9bb6c2; }
-.point-2 .map-popup-close, .point-3 .map-popup-close, .point-4 .map-popup-close, .point-5 .map-popup-close, .point-6 .map-popup-close, .point-7 .map-popup-close { top: 8px; }
+.edge-bottom .map-popup-close { top: 8px; }
 .list-board .board-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
 .list-board .ping-card { padding: 18px; }
 .list-board .card-message { font-size: 14px; min-height: 72px; line-height: 1.8; }
@@ -170,8 +169,6 @@ body { background: radial-gradient(ellipse at 78% 0, #152c3b 0, transparent 55%)
   .map-heading > span { font-size: 11px; letter-spacing: 1px; }
   .map-heading small { font-size: 9px; }
   .map-compass { right: 14px; top: 17px; }
-  .point-2 .map-popup, .point-5 .map-popup { right: 0; left: auto; transform: none; }
-  .point-6 .map-popup, .point-7 .map-popup { left: 0; transform: none; }
   .map-pin-name { max-width: 120px; }
   .map-popup { width: 265px; }
   .map-popup .card-message { max-height: 160px; }

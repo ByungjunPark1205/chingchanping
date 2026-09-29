@@ -24,7 +24,7 @@ export type MergePreview = {
 
 export type MemberAction = {
   id: string;
-  action: "approve" | "remove" | "restore" | "merge";
+  action: "approve" | "remove" | "restore" | "merge" | "promote";
   actor: string;
   sourceNickname: string;
   targetNickname: string | null;

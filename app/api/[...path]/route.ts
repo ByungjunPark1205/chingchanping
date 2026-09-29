@@ -30,7 +30,7 @@ import {
   startOfSeoulDay,
   dateRange,
 } from "@/lib/server/service";
-import { adminMembers, previewMerge, mergeMembers, moderateMember } from "@/lib/server/member-admin";
+import { adminMembers, previewMerge, mergeMembers, moderateMember, promoteMember } from "@/lib/server/member-admin";
 import { pendingSignupAlerts } from "@/lib/server/signup-alerts";
 export const dynamic = "force-dynamic";
 const json = (data: unknown, status = 200, cookie?: string) =>
@@ -345,7 +345,9 @@ async function post(req: Request) {
     }
     else if (kind === "resolve")
       await run("UPDATE reports SET status='resolved' WHERE id=?", id);
-    else if (kind === "deactivate" || kind === "activate" || kind === "approve") {
+    else if (kind === "promote") {
+      await promoteMember(user, id);
+    } else if (kind === "deactivate" || kind === "activate" || kind === "approve") {
       await moderateMember(user, id, kind === "deactivate" ? "remove" : kind === "activate" ? "restore" : "approve");
     } else fail(400, "지원하지 않는 작업이에요.");
     return json({ ok: true });

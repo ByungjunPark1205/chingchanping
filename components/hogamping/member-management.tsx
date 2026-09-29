@@ -9,7 +9,7 @@ import { Empty } from "./common";
 
 const status = (u: ManagedMember) => u.mergedInto ? "merged" : !u.isActive ? "removed" : u.approvalStatus === "pending" ? "pending" : "active";
 const labels: Record<string, string> = { active: "활동 중", pending: "승인 대기", removed: "내보냄", merged: "합쳐짐" };
-const actionLabels = { approve: "가입 승인", remove: "내보내기", restore: "이용 복구", merge: "계정 합치기" };
+const actionLabels = { approve: "가입 승인", remove: "내보내기", restore: "이용 복구", merge: "계정 합치기", promote: "관리자 지정" };
 
 export function MemberManagement({ users, actions, busy, onAction, onMerged }: {
   users: ManagedMember[];
@@ -41,6 +41,7 @@ export function MemberManagement({ users, actions, busy, onAction, onMerged }: {
         <small>가입일 {new Date(u.createdAt).toLocaleDateString("ko-KR")}</small>
         {u.mergedInto ? <p>{u.mergedNickname} 계정으로 합쳐졌어요.</p> : u.role !== "admin" && <div className="admin-actions member-buttons">
           {u.isActive && u.approvalStatus === "pending" ? <button disabled={busy} className="primary-button" onClick={() => onAction("approve", u)}>가입 승인</button> : null}
+          {u.isActive && u.approvalStatus === "approved" ? <button disabled={busy} className="text-button" onClick={() => onAction("promote", u)}>관리자 지정</button> : null}
           <button disabled={busy} className="secondary-button" onClick={() => onAction(u.isActive ? "deactivate" : "activate", u)}>{u.isActive ? "내보내기" : "이용 복구"}</button>
           <button disabled={busy} className="text-button" onClick={() => setSourceId(u.id)}>다른 계정에 합치기</button>
         </div>}

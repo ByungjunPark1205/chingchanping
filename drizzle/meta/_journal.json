@@ -22,6 +22,13 @@
       "when": 1790643992033,
       "tag": "0002_member_management",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790745600000,
+      "tag": "0003_admin_promotion",
+      "breakpoints": true
     }
   ]
 }

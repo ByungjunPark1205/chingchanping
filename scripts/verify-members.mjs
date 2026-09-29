@@ -202,6 +202,12 @@ try {
   // Leave a pending recipient report to inspect in the local UI.
   insert("report-ui", "peer", "target");
   await request("/reports", { ...reportBody, complimentId: "report-ui" }, targetLogin.cookie, 201);
+  await action("promote", "peer", peer, 403);
+  await action("promote", "peer", admin);
+  assert.equal(row("peer").role, "admin");
+  await action("promote", "peer", admin, 409);
+  const promotionAdminData = (await request("/admin", null, admin)).data;
+  assert.equal(promotionAdminData.actions.some((a) => a.action === "promote" && a.sourceNickname === names.peer), true);
   console.log(`PASS: ${checks} API checks plus assertions for migration, approval, removal, merge rollback/concurrency, recipient-only reports, admin-only author disclosure, likes and sessions.`);
   passed = true;
 } finally {

@@ -260,8 +260,9 @@ export function AdminView({
             <MemberManagement users={data.users} actions={data.actions} busy={busy}
               onMerged={async () => { await load(); await refresh(); }}
               onAction={(kind, u) => setConfirm({ kind, id: u.id,
-                label: `${u.chatNickname}님의 ${kind === "approve" ? "가입을 승인할까요?" : kind === "activate" ? "이용을 복구할까요?" : "계정을 내보낼까요?"}`,
+                label: `${u.chatNickname}님의 ${kind === "approve" ? "가입을 승인할까요?" : kind === "promote" ? "관리자로 지정할까요?" : kind === "activate" ? "이용을 복구할까요?" : "계정을 내보낼까요?"}`,
                 description: kind === "approve" ? "회원 목록에 표시되고 칭찬과 공감 기능을 이용할 수 있어요."
+                  : kind === "promote" ? "이 회원은 가입 승인, 회원 관리, 신고 처리를 할 수 있어요."
                   : kind === "activate" ? (u.approvalStatus === "pending" ? "가입 승인 대기 상태로 복구합니다. 활동을 허용하려면 이후 가입 승인도 필요해요." : "다시 로그인하고 활동할 수 있어요. 받은 칭찬도 다시 표시됩니다.")
                     : "즉시 로그아웃되고 로그인·활동이 차단됩니다. 회원 목록과 받은 칭찬이 숨겨지며, 같은 닉네임으로 재가입할 수 없어요. 기록은 보관되고 나중에 이용을 복구할 수 있어요.",
               })} />

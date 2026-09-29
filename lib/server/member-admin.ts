@@ -64,6 +64,22 @@ export async function moderateMember(actor: Account, id: string, action: "approv
   } catch (error) { actionError(error); }
 }
 
+export async function promoteMember(actor: Account, id: string) {
+  const source = await first<AdminUser>(`${userSQL} WHERE u.id=?`, id);
+  if (!source) return fail(404, "회원을 찾을 수 없어요.");
+  if (id === actor.id || source.role === "admin") fail(409, "이미 운영자이거나 본인 계정이에요.");
+  if (!source.isActive || source.approvalStatus !== "approved" || source.mergedInto)
+    fail(400, "활동 중인 승인 회원만 운영자로 지정할 수 있어요.");
+  const db = database();
+  try {
+    await db.batch([
+      db.prepare("INSERT INTO member_actions (id,actor_id,action,source_id,source_nickname,created_at) VALUES (?,?,'promote',?,?,?)")
+        .bind(crypto.randomUUID(), actor.id, id, source.chatNickname, Date.now()),
+      db.prepare("UPDATE users SET role='admin' WHERE id=? AND role='member' AND is_active=1 AND approval_status='approved' AND merged_into IS NULL").bind(id),
+    ]);
+  } catch (error) { actionError(error); }
+}
+
 export async function mergeMembers(actor: Account, sourceId: string, targetId: string, sourceName: string, targetName: string) {
   await mergePair(sourceId, targetId);
   const db = database();
