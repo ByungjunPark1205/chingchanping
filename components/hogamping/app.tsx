@@ -641,7 +641,6 @@ function HomeBoard({
 }) {
   const [mode, setMode] = useState("space");
   const [filter, setFilter] = useState("all");
-  const [limit, setLimit] = useState(12);
   const [today] = useState(() => new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10));
   const [start, setStart] = useState(today);
   const [end, setEnd] = useState(today);
@@ -668,7 +667,7 @@ function HomeBoard({
           <ArrowRight size={17} />
         </Link>
       </PageHeading>
-      <section className="board-section" aria-label="칭찬핑 보드">
+      <section className={`board-section ${mode === "list" ? "list-view-section" : "map-view-section"}`} aria-label="칭찬핑 보드">
         <div className="board-toolbar">
           <div className="board-title">
             <span className="live-dot" />
@@ -681,7 +680,6 @@ function HomeBoard({
               setDateError("");
               if (value === "all") {
                 setAppliedRange("");
-                setLimit(12);
                 onDateRange();
               }
             }}>
@@ -728,7 +726,6 @@ function HomeBoard({
             setStart(from);
             setEnd(until);
             setAppliedRange(`${from} ~ ${until}`);
-            setLimit(12);
             onDateRange(from, until);
           }}>
             <label>시작 날짜<input type="date" name="start" defaultValue={start} required /></label>
@@ -776,9 +773,7 @@ function HomeBoard({
             <PingMap key={appliedRange} pings={filtered} weeklyIds={isExample ? [] : weeklyPings.map((ping) => ping.id)} example={isExample} onLike={onLike} />
           ) : (
             <div className="board-cards">
-              {filtered
-                .slice(0, limit)
-                .map((ping, i) => (
+              {filtered.map((ping, i) => (
                   <PingCard
                     key={ping.id}
                     ping={ping}
@@ -792,11 +787,6 @@ function HomeBoard({
             </div>
           )}
         </div>
-        {mode === "list" && filtered.length > limit && (
-          <button className="load-more" onClick={() => setLimit((l) => l + 12)}>
-            칭찬핑 더 보기 <ArrowDown size={16} />
-          </button>
-        )}
         <div className="board-legend">
           <span>
             <span className="live-dot" />

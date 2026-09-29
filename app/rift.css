@@ -165,7 +165,11 @@ body { background: radial-gradient(ellipse at 78% 0, #152c3b 0, transparent 55%)
 .map-popup .card-marker { display: none; }
 .map-popup-close { position: absolute; top: 17px; right: 9px; padding: 5px; z-index: 2; color: #9bb6c2; }
 .edge-bottom .map-popup-close { top: 8px; }
-.list-board { min-height: 0; padding: 18px 22px 26px; background: linear-gradient(180deg, #0d202b, #0b1a25); border-block: 1px solid #254450; }
+.list-board { min-height: 0; max-height: min(72vh, 760px); overflow-x: hidden; overflow-y: auto; scrollbar-gutter: stable; padding: 18px 22px 26px; background: linear-gradient(180deg, #0d202b, #0b1a25); border-block: 1px solid #254450; scrollbar-color: #3a6875 #0a1a25; }
+.list-board::-webkit-scrollbar { width: 9px; }
+.list-board::-webkit-scrollbar-track { background: #0a1a25; }
+.list-board::-webkit-scrollbar-thumb { background: #3a6875; border: 2px solid #0a1a25; border-radius: 999px; }
+.list-view-section > .example-label { position: relative; top: auto; left: auto; padding: 12px 22px 0; }
 .list-board .board-cards { display: flex; flex-direction: column; gap: 10px; max-width: 980px; margin: 0 auto; }
 .list-board .board-card { position: relative; inset: auto; width: 100%; max-width: none; }
 .list-board .ping-card { display: grid; grid-template-columns: minmax(118px, .24fr) minmax(0, 1fr) minmax(142px, .28fr); align-items: center; column-gap: 18px; padding: 14px 16px; border-radius: 12px; }
@@ -190,7 +194,8 @@ body { background: radial-gradient(ellipse at 78% 0, #152c3b 0, transparent 55%)
   .view-toggle button { width: 28px; height: 28px; }
   .map-heading small { color: #83a6ad; }
   .feed-description, .example-label { padding: 11px 16px; font-size: 11px; }
-  .list-board { padding: 14px 12px 22px; }
+  .list-view-section > .example-label { padding: 12px 14px 0; }
+  .list-board { max-height: 64vh; padding: 14px 12px 22px; }
   .list-board .board-cards { gap: 10px; }
   .list-board .ping-card { grid-template-columns: 1fr; row-gap: 10px; padding: 14px; }
   .list-board .weekly-rank, .list-board .card-top, .list-board .card-message, .list-board .card-bottom { grid-column: 1; }
