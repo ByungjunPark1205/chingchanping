@@ -5,7 +5,7 @@ export type Member = {
   avatar: number;
   count: number;
 };
-export type Viewer = Member & { role: "member" | "admin"; unread: number };
+export type Viewer = Member & { role: "member" | "admin"; unread: number; approvalStatus: "pending" | "approved" };
 export type Ping = {
   id: string;
   message: string;

@@ -60,6 +60,9 @@ try {
   const registered = (await request("/home", undefined, registeredCookie)).data.viewer;
   assert.equal(registered.chatNickname, "가입검증");
   assert.equal(registered.lolNickname, "");
+  assert.equal(registered.approvalStatus, "pending");
+  // Membership approval is exercised through the API in verify-members.mjs.
+  db.prepare("UPDATE users SET approval_status='approved' WHERE id=?").run(registered.id);
   assert.match(db.prepare("SELECT password_hash FROM users WHERE id=?").get(registered.id).password_hash, /^\$2[aby]\$12\$/);
   await request("/auth/login", { chatNickname: "가입검증", password: "Nickname-only-password-2026" });
   await request("/auth/register", { chatNickname: "가입검증", password: "Nickname-only-password-2026" }, null, 409);

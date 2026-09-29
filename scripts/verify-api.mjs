@@ -43,7 +43,7 @@ async function request(
   checks++;
   return { data, response };
 }
-const setupToken = readFileSync(".env", "utf8").match(
+const setupToken = process.env.TEST_ADMIN_SETUP_TOKEN ?? readFileSync(".env", "utf8").match(
   /^ADMIN_SETUP_TOKEN=(.+)$/m,
 )?.[1];
 assert.ok(setupToken);
@@ -74,11 +74,19 @@ for (const account of accounts) {
   const home = await request("/home", null, account);
   account.id = home.data.viewer.id;
   assert.equal(home.data.viewer.role, "member");
+  assert.equal(home.data.viewer.approvalStatus, "pending");
   writeFileSync(
     ".sites-runtime/qa-state.json",
     JSON.stringify({ accounts, password }, null, 2),
   );
 }
+await request("/received", null, b, null, 403);
+await request("/compliments", { receiverId: b.id, message: "승인 전 작성 차단을 확인합니다.", category: "함께해서 즐거워요" }, a, null, 403);
+await request("/admin/setup", { token: "invalid-setup-token" }, a, null, 403);
+await request("/admin/setup", { token: setupToken }, a);
+await request("/admin/setup", { token: setupToken }, b, null, 409);
+await request("/admin/action", { kind: "approve", id: b.id }, a);
+await request("/admin/action", { kind: "approve", id: c.id }, a);
 await request(
   "/compliments",
   {
@@ -184,12 +192,9 @@ await request(
   null,
   409,
 );
-await request("/admin/setup", { token: "invalid-setup-token" }, a, null, 403);
-await request("/admin/setup", { token: setupToken }, a);
-await request("/admin/setup", { token: setupToken }, b, null, 409);
 const admin = (await request("/admin", null, a)).data;
-assert.equal(admin.pings.find((p) => p.id === sent.id).sender, a.name);
-assert.ok(admin.reports.length);
+assert.equal("sender" in admin.pings.find((p) => p.id === sent.id), false);
+assert.equal(admin.reports.find((r) => r.complimentId === sent.id).sender, a.name);
 await request("/admin/action", { kind: "hide", id: sent.id }, a);
 assert.equal(
   (await request("/home")).data.pings.some((p) => p.id === sent.id),

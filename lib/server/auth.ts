@@ -18,6 +18,8 @@ export type Account = {
   avatar: number;
   last_read_at: number;
   is_active: number;
+  approval_status: "pending" | "approved";
+  merged_into: string | null;
 };
 export const COOKIE = "hogamping_session";
 export const fail = (status: number, message: string): never => {
@@ -45,7 +47,7 @@ export async function currentUser(req: Request) {
   const token = rawToken(req);
   if (!/^[a-f0-9]{64}$/.test(token)) return null;
   return first<Account>(
-    "SELECT u.* FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>? AND u.is_active=1",
+    "SELECT u.* FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>? AND u.is_active=1 AND u.merged_into IS NULL",
     await digest(token),
     Date.now(),
   );
@@ -56,8 +58,11 @@ export async function requireUser(req: Request) {
 }
 export async function requireAdmin(req: Request) {
   const u = await requireUser(req);
-  if (u.role !== "admin") fail(403, "운영자만 확인할 수 있는 공간이에요.");
+  if (u.role !== "admin" || u.approval_status !== "approved") fail(403, "운영자만 확인할 수 있는 공간이에요.");
   return u;
+}
+export function requireApproved(user: Account) {
+  if (user.approval_status !== "approved") fail(403, "가입 승인 대기 중이에요. 운영자가 승인한 후 이용할 수 있어요.");
 }
 export function clearSessionCookie(req: Request) {
   return `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${new URL(req.url).protocol === "https:" ? "; Secure" : ""}`;
@@ -72,10 +77,11 @@ export async function createSession(
     .join("");
   const age = remember ? 30 * 86400 : 86400;
   await run(
-    "INSERT INTO sessions (token_hash,user_id,expires_at) VALUES (?,?,?)",
+    "INSERT INTO sessions (token_hash,user_id,expires_at) SELECT ?,?,? WHERE EXISTS(SELECT 1 FROM users WHERE id=? AND is_active=1 AND merged_into IS NULL)",
     await digest(token),
     userId,
     Date.now() + age * 1000,
+    userId,
   );
   return `${COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax${remember ? `; Max-Age=${age}` : ""}${new URL(req.url).protocol === "https:" ? "; Secure" : ""}`;
 }

@@ -7,6 +7,7 @@ import {
   currentUser,
   requireUser,
   requireAdmin,
+  requireApproved,
   jsonBody,
   clean,
   password,
@@ -29,6 +30,7 @@ import {
   startOfSeoulDay,
   dateRange,
 } from "@/lib/server/service";
+import { adminMembers, previewMerge, mergeMembers, moderateMember } from "@/lib/server/member-admin";
 export const dynamic = "force-dynamic";
 const json = (data: unknown, status = 200, cookie?: string) =>
   Response.json(data, {
@@ -59,6 +61,7 @@ async function get(req: Request) {
   }
   if (path === "/received") {
     const user = await requireUser(req);
+    requireApproved(user);
     return json({ member: await member(user.id), pings: await pings({ receiverId: user.id, viewerId: user.id }) });
   }
   if (path.startsWith("/users/")) {
@@ -70,16 +73,20 @@ async function get(req: Request) {
   }
   if (path === "/admin") {
     await requireAdmin(req);
-    const users = await all(
-      "SELECT id,chat_nickname AS chatNickname,lol_nickname AS lolNickname,created_at AS createdAt,is_active AS isActive,role FROM users ORDER BY created_at DESC LIMIT 1000",
-    );
+    const users = await adminMembers();
     const board = await all(
-      `SELECT c.id,c.message,c.created_at AS createdAt,c.is_hidden AS isHidden,s.chat_nickname AS sender,r.chat_nickname AS receiver,(SELECT COUNT(*) FROM reports WHERE compliment_id=c.id) AS reportCount FROM compliments c JOIN users s ON s.id=c.sender_id JOIN users r ON r.id=c.receiver_id ORDER BY c.created_at DESC LIMIT 1000`,
+      `SELECT c.id,c.message,c.created_at AS createdAt,c.is_hidden AS isHidden,r.chat_nickname AS receiver,(SELECT COUNT(*) FROM reports WHERE compliment_id=c.id) AS reportCount FROM compliments c JOIN users r ON r.id=c.receiver_id ORDER BY c.created_at DESC LIMIT 1000`,
     );
     const reports = await all(
-      `SELECT r.id,r.compliment_id AS complimentId,c.message,r.reason,u.chat_nickname AS reporter,r.status,r.created_at AS createdAt FROM reports r JOIN compliments c ON c.id=r.compliment_id JOIN users u ON u.id=r.reporter_id ORDER BY CASE WHEN r.status='pending' THEN 0 ELSE 1 END,r.created_at DESC LIMIT 1000`,
+      `SELECT r.id,r.compliment_id AS complimentId,c.message,c.created_at AS messageCreatedAt,c.is_hidden AS isHidden,r.reason,u.chat_nickname AS reporter,s.chat_nickname AS sender,receiver.chat_nickname AS receiver,r.status,r.created_at AS createdAt FROM reports r JOIN compliments c ON c.id=r.compliment_id JOIN users u ON u.id=r.reporter_id JOIN users s ON s.id=c.sender_id JOIN users receiver ON receiver.id=c.receiver_id ORDER BY CASE WHEN r.status='pending' THEN 0 ELSE 1 END,r.created_at DESC LIMIT 1000`,
     );
-    return json({ users, pings: board, reports });
+    const actions = await all(`SELECT a.id,a.action,u.chat_nickname AS actor,a.source_nickname AS sourceNickname,a.target_nickname AS targetNickname,a.created_at AS createdAt FROM member_actions a JOIN users u ON u.id=a.actor_id ORDER BY a.created_at DESC LIMIT 100`);
+    return json({ users, pings: board, reports, actions });
+  }
+  if (path === "/admin/merge-preview") {
+    await requireAdmin(req);
+    const params = new URL(req.url).searchParams;
+    return json(await previewMerge(clean(params.get("source"), "합칠 계정", 64), clean(params.get("target"), "남길 계정", 64)));
   }
   return json({ error: "요청한 경로를 찾을 수 없어요." }, 404);
 }
@@ -101,7 +108,7 @@ async function post(req: Request) {
     const passwordHash = await hashPassword(pass);
     try {
       await run(
-        "INSERT INTO users (id,chat_nickname,nickname_key,lol_nickname,password_hash,role,avatar,created_at,is_active,last_read_at) VALUES (?,?,?,?,?,'member',?,?,1,0)",
+        "INSERT INTO users (id,chat_nickname,nickname_key,lol_nickname,password_hash,role,avatar,created_at,is_active,last_read_at,approval_status) VALUES (?,?,?,?,?,'member',?,?,1,0,'pending')",
         id,
         chat,
         key,
@@ -116,7 +123,7 @@ async function post(req: Request) {
       throw e;
     }
     return json(
-      { ok: true },
+      { ok: true, approvalStatus: "pending" },
       201,
       await createSession(req, id, body.remember === true),
     );
@@ -141,7 +148,7 @@ async function post(req: Request) {
       user?.password_hash ??
         "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxQT/7.PgsYNiOvvNyG9goW1u6a",
     );
-    if (!user || !valid || !user.is_active)
+    if (!user || !valid || !user.is_active || user.merged_into)
       fail(
         401,
         "닉네임 또는 비밀번호를 확인해주세요. 이용이 제한된 계정은 운영자에게 문의해주세요.",
@@ -169,19 +176,20 @@ async function post(req: Request) {
   }
   const user = await requireUser(req);
   if (path === "/compliments/like") {
+    requireApproved(user);
     const id = clean(body.complimentId, "칭찬", 64);
     if (typeof body.liked !== "boolean") fail(400, "공감 여부를 확인해주세요.");
     await rateLimit(`like:${user.id}`, 120, 60000);
     const target = await first(
-      "SELECT c.id FROM compliments c JOIN users u ON u.id=c.receiver_id WHERE c.id=? AND c.is_hidden=0 AND u.is_active=1",
+      "SELECT c.id FROM compliments c JOIN users u ON u.id=c.receiver_id WHERE c.id=? AND c.is_hidden=0 AND u.is_active=1 AND u.approval_status='approved'",
       id,
     );
     if (!target) fail(404, "해당 칭찬을 찾을 수 없어요.");
     if (body.liked) {
       // The unique pair makes retries and concurrent requests idempotent.
       await run(
-        "INSERT INTO compliment_likes (compliment_id,user_id,created_at) VALUES (?,?,?) ON CONFLICT(compliment_id,user_id) DO NOTHING",
-        id, user.id, now,
+        "INSERT INTO compliment_likes (compliment_id,user_id,created_at) SELECT ?,?,? WHERE EXISTS(SELECT 1 FROM users WHERE id=? AND is_active=1 AND approval_status='approved' AND merged_into IS NULL) ON CONFLICT(compliment_id,user_id) DO NOTHING",
+        id, user.id, now, user.id,
       );
     } else {
       await run("DELETE FROM compliment_likes WHERE compliment_id=? AND user_id=?", id, user.id);
@@ -223,6 +231,7 @@ async function post(req: Request) {
     return json({ ok: true });
   }
   if (path === "/compliments") {
+    requireApproved(user);
     const receiverId = clean(body.receiverId, "받는 사람", 64);
     const message = clean(body.message, "칭찬 메시지", 300, 5);
     const category = clean(body.category, "칭찬 유형", 30);
@@ -235,7 +244,7 @@ async function post(req: Request) {
     const day = startOfSeoulDay(now);
     // The guard and insert are a single SQLite statement: concurrent requests cannot bypass limits.
     const result = await run(
-      `INSERT INTO compliments (id,sender_id,receiver_id,message,category,created_at,is_hidden) SELECT ?,?,?,?,?,?,0 WHERE EXISTS(SELECT 1 FROM users WHERE id=? AND is_active=1) AND EXISTS(SELECT 1 FROM users WHERE id=? AND is_active=1) AND NOT EXISTS(SELECT 1 FROM compliments WHERE sender_id=? AND receiver_id=? AND created_at>?) AND (SELECT COUNT(*) FROM compliments WHERE sender_id=? AND receiver_id=? AND created_at>=?)<3 AND (SELECT COUNT(*) FROM compliments WHERE sender_id=? AND created_at>=?)<10`,
+      `INSERT INTO compliments (id,sender_id,receiver_id,message,category,created_at,is_hidden) SELECT ?,?,?,?,?,?,0 WHERE EXISTS(SELECT 1 FROM users WHERE id=? AND is_active=1 AND approval_status='approved' AND merged_into IS NULL) AND EXISTS(SELECT 1 FROM users WHERE id=? AND is_active=1 AND approval_status='approved' AND merged_into IS NULL) AND NOT EXISTS(SELECT 1 FROM compliments WHERE sender_id=? AND receiver_id=? AND created_at>?) AND (SELECT COUNT(*) FROM compliments WHERE sender_id=? AND receiver_id=? AND created_at>=?)<3 AND (SELECT COUNT(*) FROM compliments WHERE sender_id=? AND created_at>=?)<10`,
       id,
       user.id,
       receiverId,
@@ -261,6 +270,7 @@ async function post(req: Request) {
     return json({ ok: true, id }, 201);
   }
   if (path === "/reports") {
+    requireApproved(user);
     await rateLimit(`reports:${user.id}`, 20, 3600000);
     const id = clean(body.complimentId, "메시지", 64);
     const reason = clean(body.reason, "신고 사유", 300, 5);
@@ -271,12 +281,15 @@ async function post(req: Request) {
     if (!ping || ping.receiver_id !== user.id)
       fail(403, "내가 받은 칭찬핑만 신고할 수 있어요.");
     const result = await run(
-      "INSERT OR IGNORE INTO reports (id,compliment_id,reporter_id,reason,created_at,status) VALUES (?,?,?,?,?,'pending')",
+      "INSERT OR IGNORE INTO reports (id,compliment_id,reporter_id,reason,created_at,status) SELECT ?,?,?,?,?,'pending' WHERE EXISTS(SELECT 1 FROM users WHERE id=? AND is_active=1 AND approval_status='approved' AND merged_into IS NULL) AND EXISTS(SELECT 1 FROM compliments WHERE id=? AND receiver_id=? AND is_hidden=0)",
       crypto.randomUUID(),
       id,
       user.id,
       reason,
       now,
+      user.id,
+      id,
+      user.id,
     );
     if (!result.meta.changes)
       fail(409, "이미 접수된 신고예요. 운영자가 확인하고 있어요.");
@@ -299,11 +312,16 @@ async function post(req: Request) {
         .bind(user.id),
       db
         .prepare(
-          "UPDATE users SET role='admin' WHERE id=? AND EXISTS(SELECT 1 FROM admin_bootstrap WHERE id='initial' AND user_id=?)",
+          "UPDATE users SET role='admin',approval_status='approved' WHERE id=? AND EXISTS(SELECT 1 FROM admin_bootstrap WHERE id='initial' AND user_id=?) AND NOT EXISTS(SELECT 1 FROM users WHERE role='admin' AND id<>?)",
         )
-        .bind(user.id, user.id),
+        .bind(user.id, user.id, user.id),
     ]);
     if (!result[1].meta.changes) fail(409, "이미 운영자가 등록되어 있어요.");
+    return json({ ok: true });
+  }
+  if (path === "/admin/merge") {
+    const actor = await requireAdmin(req);
+    await mergeMembers(actor, clean(body.sourceId, "합칠 계정", 64), clean(body.targetId, "남길 계정", 64), clean(body.sourceNickname, "합칠 닉네임", 24, 2), clean(body.targetNickname, "남길 닉네임", 24, 2));
     return json({ ok: true });
   }
   if (path === "/admin/action") {
@@ -318,25 +336,15 @@ async function post(req: Request) {
           .prepare("UPDATE reports SET status='resolved' WHERE compliment_id=?")
           .bind(id),
       ]);
-    } else if (kind === "restore")
+    } else if (kind === "restore") {
+      const ping = await first<{ sender_id: string; receiver_id: string }>("SELECT sender_id,receiver_id FROM compliments WHERE id=?", id);
+      if (ping && ping.sender_id === ping.receiver_id) fail(400, "계정을 합치면서 본인 간 칭찬이 된 기록은 공개할 수 없어요.");
       await run("UPDATE compliments SET is_hidden=0 WHERE id=?", id);
+    }
     else if (kind === "resolve")
       await run("UPDATE reports SET status='resolved' WHERE id=?", id);
-    else if (kind === "deactivate" || kind === "activate") {
-      if (id === user.id) fail(400, "자신의 계정은 비활성화할 수 없어요.");
-      const target = await first<{ role: string }>(
-        "SELECT role FROM users WHERE id=?",
-        id,
-      );
-      if (!target) fail(404, "사용자를 찾을 수 없어요.");
-      if (target!.role === "admin")
-        fail(403, "운영자 계정은 비활성화할 수 없어요.");
-      await db.batch([
-        db
-          .prepare("UPDATE users SET is_active=? WHERE id=?")
-          .bind(kind === "activate" ? 1 : 0, id),
-        db.prepare("DELETE FROM sessions WHERE user_id=?").bind(id),
-      ]);
+    else if (kind === "deactivate" || kind === "activate" || kind === "approve") {
+      await moderateMember(user, id, kind === "deactivate" ? "remove" : kind === "activate" ? "restore" : "approve");
     } else fail(400, "지원하지 않는 작업이에요.");
     return json({ ok: true });
   }
@@ -354,7 +362,7 @@ async function patch(req: Request) {
     fail(400, "닉네임에는 줄바꿈을 넣을 수 없어요.");
   try {
     await run(
-      "UPDATE users SET chat_nickname=?,nickname_key=?,lol_nickname=? WHERE id=?",
+      "UPDATE users SET chat_nickname=?,nickname_key=?,lol_nickname=? WHERE id=? AND is_active=1 AND merged_into IS NULL",
       chat,
       chat.toLocaleLowerCase("ko-KR"),
       lol,

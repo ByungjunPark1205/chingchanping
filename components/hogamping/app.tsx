@@ -125,6 +125,7 @@ export function Chingchanping({
     let cancelled = false;
     const id = userId ?? viewer?.id;
     if ((page !== "profile" && page !== "received") || !id) return;
+    if (!userId && viewer?.approvalStatus === "pending") return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Reset the request indicator when the profile or authenticated account changes.
     setPrivateLoading(true);
     setPrivateError("");
@@ -151,8 +152,9 @@ export function Chingchanping({
     return () => {
       cancelled = true;
     };
-  }, [page, userId, viewer?.id, pings]);
+  }, [page, userId, viewer?.id, viewer?.approvalStatus, pings]);
   function compose(member: Member) {
+    if (viewer?.approvalStatus === "pending") { toast("가입 승인 후 칭찬을 보낼 수 있어요."); return; }
     if (!viewer) {
       setRecipient(member);
       setAuth("login");
@@ -229,6 +231,7 @@ export function Chingchanping({
       annotations: { readOnlyHint: false, untrustedContentHint: false },
       execute: (input) => {
         if (!viewer) throw new Error("Login is required");
+        if (viewer.approvalStatus !== "approved") throw new Error("Membership approval is required");
         const id = (input as { recipientId?: unknown })?.recipientId;
         if (typeof id !== "string")
           throw new Error("recipientId must be a string");
@@ -254,6 +257,7 @@ export function Chingchanping({
   }
   async function like(ping: Ping) {
     if (!viewer) { setAuth("login"); return; }
+    if (viewer.approvalStatus === "pending") { toast("가입 승인 후 공감할 수 있어요."); return; }
     try {
       await api("/compliments/like", { complimentId: ping.id, liked: !ping.liked });
       await refresh();
@@ -302,7 +306,7 @@ export function Chingchanping({
           {viewer?.role === "admin" && (
             <Link className="guide-button" href="/admin">
               <ShieldCheck size={17} />
-              운영자 페이지
+              관리자 페이지
               <ChevronRight size={14} />
             </Link>
           )}
@@ -312,7 +316,7 @@ export function Chingchanping({
                 <Avatar name={viewer.chatNickname} index={viewer.avatar} />
                 <span>
                   {viewer.chatNickname}
-                  <small>로그인 중</small>
+                  <small>{viewer.approvalStatus === "pending" ? "승인 대기" : "로그인 중"}</small>
                 </span>
               </Link>
               <button aria-label="로그아웃" onClick={logout}>
@@ -361,6 +365,7 @@ export function Chingchanping({
           </div>
         </header>
         <main id="main-content" className={`main-content page-${page}`}>
+          {viewer?.approvalStatus === "pending" && <div className="approval-banner" role="status"><div><b>가입 승인 대기 중</b><p>운영자가 승인하면 칭찬을 보내고 공감할 수 있어요.</p></div><button className="secondary-button" onClick={refresh}>승인 상태 확인</button></div>}
           {error && (
             <div className="error-banner" role="alert">
               {error}
@@ -417,7 +422,7 @@ export function Chingchanping({
               </button>
             </div>
           )}
-          {page === "received" && viewer && (
+          {page === "received" && viewer && viewer.approvalStatus === "approved" && (
             <>
               <PageHeading
                 title="내가 받은 칭찬핑"
@@ -445,7 +450,7 @@ export function Chingchanping({
               />
             </>
           )}
-          {page === "profile" && !needsLogin && (
+          {page === "profile" && !needsLogin && (userId || viewer?.approvalStatus === "approved") && (
             <>
               {privateLoading ? (
                 <Loading />
@@ -562,7 +567,7 @@ export function Chingchanping({
           setAuth(null);
         }}
       />
-      {viewer && recipient && (
+      {viewer?.approvalStatus === "approved" && recipient && (
         <ComposeDialog
           key={recipient.id}
           member={recipient}
@@ -580,7 +585,7 @@ export function Chingchanping({
           <div className="guide-steps">
             <p>
               <b>01</b>
-              <span>톡방 닉네임으로 가입하기</span>
+              <span>톡방 닉네임으로 가입 신청 후 승인받기</span>
             </p>
             <p>
               <b>02</b>
@@ -594,8 +599,8 @@ export function Chingchanping({
           <div className="privacy-note">
             <ShieldCheck size={20} />
             <p>
-              작성자는 다른 회원에게 공개되지 않아요. 악용 방지를 위해 운영자만
-              작성 기록을 확인할 수 있어요.
+              작성자는 다른 회원에게 공개되지 않아요. 수신자가 메시지를 신고하면
+              관리자에게만 작성자와 신고 내용이 표시돼요.
             </p>
           </div>
           <p className="muted">

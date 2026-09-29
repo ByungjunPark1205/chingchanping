@@ -1,10 +1,12 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { ArrowRight, ShieldCheck } from "lucide-react";
+import { ArrowRight, ShieldCheck, RefreshCw, LockKeyhole } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/client";
 import { time } from "@/lib/format";
 import type { Viewer } from "@/lib/types";
+import type { ManagedMember, MemberAction } from "@/lib/admin-types";
+import { MemberManagement } from "./member-management";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -21,19 +23,10 @@ import { Empty, Loading, PageHeading } from "./common";
 type AdminPing = {
   id: string;
   message: string;
-  sender: string;
   receiver: string;
   createdAt: number;
   isHidden: number;
   reportCount: number;
-};
-type AdminUser = {
-  id: string;
-  chatNickname: string;
-  lolNickname: string;
-  createdAt: number;
-  isActive: number;
-  role: string;
 };
 type AdminReport = {
   id: string;
@@ -41,6 +34,10 @@ type AdminReport = {
   message: string;
   reason: string;
   reporter: string;
+  sender: string;
+  receiver: string;
+  messageCreatedAt: number;
+  isHidden: number;
   status: string;
   createdAt: number;
 };
@@ -56,9 +53,10 @@ export function AdminView({
   refresh: () => Promise<void>;
 }) {
   const [data, setData] = useState<{
-    users: AdminUser[];
+    users: ManagedMember[];
     pings: AdminPing[];
     reports: AdminReport[];
+    actions: MemberAction[];
   } | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -66,6 +64,7 @@ export function AdminView({
     kind: string;
     id: string;
     label: string;
+    description: string;
   } | null>(null);
   const load = useCallback(async () => {
     try {
@@ -76,8 +75,11 @@ export function AdminView({
     }
   }, []);
   useEffect(() => {
-    if (viewer?.role === "admin") void load();
-  }, [viewer?.role, load]);
+    if (viewer?.role !== "admin") return;
+    let cancelled = false;
+    void api<NonNullable<typeof data>>("/admin").then((next) => { if (!cancelled) { setData(next); setError(""); } }).catch((e) => { if (!cancelled) setError((e as Error).message); });
+    return () => { cancelled = true; };
+  }, [viewer?.role]);
   if (loading) return <Loading />;
   if (!viewer)
     return (
@@ -91,8 +93,7 @@ export function AdminView({
     return (
       <>
         <PageHeading
-          eyebrow="COMMUNITY CARE"
-          title="운영자 공간"
+          title="관리자 페이지"
           description="신고 내역과 칭찬, 회원을 관리해요."
         />
         <section className="settings-panel setup-panel">
@@ -147,10 +148,9 @@ export function AdminView({
   return (
     <>
       <PageHeading
-        eyebrow="COMMUNITY CARE"
-        title="운영자 공간"
-        description="신고 내역과 칭찬, 회원을 관리해요."
-      />
+        title="관리자 페이지"
+        description="가입 승인, 회원 관리, 신고 처리를 할 수 있어요."
+      ><button className="secondary-button" disabled={busy} onClick={load}><RefreshCw size={16} />새로고침</button></PageHeading>
       {error && (
         <div className="error-banner">
           {error}
@@ -160,15 +160,16 @@ export function AdminView({
       {!data ? (
         <Loading />
       ) : (
-        <Tabs defaultValue="reports" className="admin-tabs">
+        <Tabs defaultValue="users" className="admin-tabs">
           <TabsList>
+            <TabsTrigger value="users">회원 관리 {data.users.filter((u) => u.isActive && !u.mergedInto && u.approvalStatus === "pending").length > 0 && `· 승인 대기 ${data.users.filter((u) => u.isActive && !u.mergedInto && u.approvalStatus === "pending").length}`}</TabsTrigger>
             <TabsTrigger value="reports">
               신고 {data.reports.filter((r) => r.status === "pending").length}
             </TabsTrigger>
             <TabsTrigger value="pings">전체 칭찬</TabsTrigger>
-            <TabsTrigger value="users">등록 사용자</TabsTrigger>
           </TabsList>
           <TabsContent value="reports">
+            <p className="report-privacy"><LockKeyhole size={16} />수신자가 신고한 칭찬의 작성자만 관리자에게 표시됩니다. 신고자와 다른 회원에게는 공개되지 않아요.</p>
             {data.reports.length === 0 ? (
               <Empty
                 title="접수된 신고가 없어요"
@@ -179,9 +180,11 @@ export function AdminView({
                 <article className="admin-record" key={r.id}>
                   <div className="admin-record-head">
                     <b>{r.status === "pending" ? "확인 필요" : "처리 완료"}</b>
-                    <span>{time(r.createdAt)}</span>
+                    <span>신고 {time(r.createdAt)}</span>
                   </div>
+                  <div className="report-identities"><span><small>작성자 · 관리자만 표시</small><b>{r.sender}</b></span><ArrowRight size={16} /><span><small>수신자</small><b>{r.receiver}</b></span></div>
                   <p>{r.message}</p>
+                  <small>작성 {new Date(r.messageCreatedAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })} · {r.isHidden ? "숨김 처리됨" : "공개 중"}</small>
                   <div className="report-reason">
                     <b>신고 사유</b> {r.reason}
                     <small>신고자: {r.reporter}</small>
@@ -196,6 +199,7 @@ export function AdminView({
                             kind: "hide",
                             id: r.complimentId,
                             label: "이 메시지를 숨길까요?",
+                            description: "공개 보드와 프로필에서 숨깁니다. 나중에 다시 공개할 수 있어요.",
                           })
                         }
                       >
@@ -222,7 +226,7 @@ export function AdminView({
                 <article className="admin-record" key={p.id}>
                   <div className="admin-record-head">
                     <b>
-                      {p.sender} <ArrowRight size={14} /> {p.receiver}
+                      익명 <ArrowRight size={14} /> {p.receiver}
                     </b>
                     <span>{time(p.createdAt)}</span>
                   </div>
@@ -241,6 +245,7 @@ export function AdminView({
                           label: p.isHidden
                             ? "이 메시지를 다시 공개할까요?"
                             : "이 메시지를 숨길까요?",
+                          description: p.isHidden ? "공개 보드와 프로필에 다시 표시합니다." : "공개 보드와 프로필에서 숨깁니다. 나중에 다시 공개할 수 있어요.",
                         })
                       }
                     >
@@ -252,41 +257,14 @@ export function AdminView({
             )}
           </TabsContent>
           <TabsContent value="users">
-            <div className="admin-users">
-              {data.users.map((u) => (
-                <article className="admin-record" key={u.id}>
-                  <div className="admin-record-head">
-                    <b>{u.chatNickname}</b>
-                    <span>
-                      {u.role === "admin"
-                        ? "운영자"
-                        : u.isActive
-                          ? "활성"
-                          : "비활성"}
-                    </span>
-                  </div>
-                  <p>{u.lolNickname}</p>
-                  <small>
-                    등록일 {new Date(u.createdAt).toLocaleDateString("ko-KR")}
-                  </small>
-                  {u.role !== "admin" && (
-                    <button
-                      disabled={busy}
-                      className="secondary-button"
-                      onClick={() =>
-                        setConfirm({
-                          kind: u.isActive ? "deactivate" : "activate",
-                          id: u.id,
-                          label: `${u.chatNickname}님을 ${u.isActive ? "비활성화" : "활성화"}할까요?`,
-                        })
-                      }
-                    >
-                      {u.isActive ? "사용자 비활성화" : "사용자 활성화"}
-                    </button>
-                  )}
-                </article>
-              ))}
-            </div>
+            <MemberManagement users={data.users} actions={data.actions} busy={busy}
+              onMerged={async () => { await load(); await refresh(); }}
+              onAction={(kind, u) => setConfirm({ kind, id: u.id,
+                label: `${u.chatNickname}님의 ${kind === "approve" ? "가입을 승인할까요?" : kind === "activate" ? "이용을 복구할까요?" : "계정을 내보낼까요?"}`,
+                description: kind === "approve" ? "회원 목록에 표시되고 칭찬과 공감 기능을 이용할 수 있어요."
+                  : kind === "activate" ? (u.approvalStatus === "pending" ? "가입 승인 대기 상태로 복구합니다. 활동을 허용하려면 이후 가입 승인도 필요해요." : "다시 로그인하고 활동할 수 있어요. 받은 칭찬도 다시 표시됩니다.")
+                    : "즉시 로그아웃되고 로그인·활동이 차단됩니다. 회원 목록과 받은 칭찬이 숨겨지며, 같은 닉네임으로 재가입할 수 없어요. 기록은 보관되고 나중에 이용을 복구할 수 있어요.",
+              })} />
           </TabsContent>
         </Tabs>
       )}
@@ -300,9 +278,7 @@ export function AdminView({
           <AlertDialogHeader>
             <AlertDialogTitle>{confirm?.label}</AlertDialogTitle>
             <AlertDialogDescription>
-              메시지를 숨기면 공개 보드와 프로필에서 사라집니다. 비활성화된
-              사용자는 로그인하거나 칭찬을 보낼 수 없습니다. 나중에 되돌릴 수
-              있어요.
+              {confirm?.description}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

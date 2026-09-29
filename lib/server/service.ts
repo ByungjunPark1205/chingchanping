@@ -23,7 +23,7 @@ export function toMember(row: Row): Member {
 export async function members() {
   return (
     await all<Row>(
-      `${memberSQL} WHERE u.is_active=1 ORDER BY u.chat_nickname COLLATE NOCASE LIMIT 1000`,
+      `${memberSQL} WHERE u.is_active=1 AND u.approval_status='approved' ORDER BY u.chat_nickname COLLATE NOCASE LIMIT 1000`,
     )
   )
     .map(toMember)
@@ -31,21 +31,20 @@ export async function members() {
 }
 export async function member(id: string) {
   const row = await first<Row>(
-    `${memberSQL} WHERE u.id=? AND u.is_active=1`,
+    `${memberSQL} WHERE u.id=? AND u.is_active=1 AND u.approval_status='approved'`,
     id,
   );
   return row ? toMember(row) : null;
 }
 export async function viewer(user: Account | null): Promise<Viewer | null> {
   if (!user) return null;
-  const m = await member(user.id);
-  if (!m) return null;
+  const m = toMember({ ...user, count: (await first<{ count: number }>(`SELECT ${countSQL} AS count FROM users u WHERE u.id=?`, user.id))?.count ?? 0 });
   const count = await first<{ total: number }>(
     "SELECT COUNT(*) AS total FROM compliments WHERE receiver_id=? AND is_hidden=0 AND created_at>?",
     user.id,
     user.last_read_at,
   );
-  return { ...m, role: user.role, unread: count?.total ?? 0 };
+  return { ...m, role: user.role, unread: count?.total ?? 0, approvalStatus: user.approval_status };
 }
 export function dateRange(params: URLSearchParams) {
   const start = params.get("start");
@@ -93,7 +92,7 @@ export async function pings(options: {
   };
   // Explicit projection: sender IDs and private account fields never leave this function.
   const weekStart = startOfSeoulWeek();
-  const filters = ["c.is_hidden=0", "u.is_active=1"];
+  const filters = ["c.is_hidden=0", "u.is_active=1", "u.approval_status='approved'"];
   const bindings: (string | number)[] = [viewerId ?? "", weekStart, weekStart + 7 * 86400000];
   if (receiverId) { filters.push("c.receiver_id=?"); bindings.push(receiverId); }
   if (from !== undefined) { filters.push("c.created_at>=?"); bindings.push(from); }
@@ -101,9 +100,9 @@ export async function pings(options: {
   const rows = await all<PingRow>(
     `SELECT * FROM (
       SELECT c.id,c.message,c.created_at,c.category,c.receiver_id,u.chat_nickname,u.lol_nickname,u.avatar,${countSQL} AS count,
-        (SELECT COUNT(*) FROM compliment_likes l JOIN users liker ON liker.id=l.user_id WHERE l.compliment_id=c.id AND liker.is_active=1) AS likes,
+        (SELECT COUNT(*) FROM compliment_likes l JOIN users liker ON liker.id=l.user_id WHERE l.compliment_id=c.id AND liker.is_active=1 AND liker.approval_status='approved') AS likes,
         EXISTS(SELECT 1 FROM compliment_likes l WHERE l.compliment_id=c.id AND l.user_id=?) AS liked,
-        (SELECT COUNT(*) FROM compliment_likes l JOIN users liker ON liker.id=l.user_id WHERE l.compliment_id=c.id AND liker.is_active=1 AND l.created_at>=? AND l.created_at<?) AS weekly_likes
+        (SELECT COUNT(*) FROM compliment_likes l JOIN users liker ON liker.id=l.user_id WHERE l.compliment_id=c.id AND liker.is_active=1 AND liker.approval_status='approved' AND l.created_at>=? AND l.created_at<?) AS weekly_likes
       FROM compliments c JOIN users u ON u.id=c.receiver_id WHERE ${filters.join(" AND ")}
     ) ${weekly ? "WHERE weekly_likes>0 ORDER BY weekly_likes DESC,created_at DESC,id DESC LIMIT 3" : "ORDER BY created_at DESC,id DESC LIMIT 500"}`,
     ...bindings,
@@ -124,7 +123,7 @@ export function startOfSeoulDay(now = Date.now()) {
 }
 export async function stats() {
   const result = await first<{ pings: number; members: number; today: number }>(
-    `SELECT (SELECT COUNT(*) FROM compliments c JOIN users u ON u.id=c.receiver_id WHERE c.is_hidden=0 AND u.is_active=1) AS pings,(SELECT COUNT(*) FROM users WHERE is_active=1) AS members,(SELECT COUNT(*) FROM compliments c JOIN users u ON u.id=c.receiver_id WHERE c.is_hidden=0 AND u.is_active=1 AND c.created_at>=?) AS today`,
+    `SELECT (SELECT COUNT(*) FROM compliments c JOIN users u ON u.id=c.receiver_id WHERE c.is_hidden=0 AND u.is_active=1 AND u.approval_status='approved') AS pings,(SELECT COUNT(*) FROM users WHERE is_active=1 AND approval_status='approved') AS members,(SELECT COUNT(*) FROM compliments c JOIN users u ON u.id=c.receiver_id WHERE c.is_hidden=0 AND u.is_active=1 AND u.approval_status='approved' AND c.created_at>=?) AS today`,
     startOfSeoulDay(),
   );
   return result ?? { pings: 0, members: 0, today: 0 };

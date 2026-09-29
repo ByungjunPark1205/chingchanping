@@ -6,6 +6,7 @@ import { api } from "@/lib/client";
 import type { Viewer } from "@/lib/types";
 import { Switch } from "@/components/ui/switch";
 import { PageHeading } from "./common";
+import Link from "./link";
 
 export function SettingsView({
   viewer,
@@ -28,6 +29,7 @@ export function SettingsView({
         title="설정"
         description="프로필과 화면 표시, 비밀번호를 관리해요."
       />
+      {viewer.role === "admin" && <Link href="/admin" className="secondary-button admin-settings-link">관리자 페이지</Link>}
       <div className="settings-layout">
         <section className="settings-panel">
           <h2>내 프로필</h2>

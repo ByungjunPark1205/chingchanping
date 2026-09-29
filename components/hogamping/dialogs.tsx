@@ -41,7 +41,7 @@ export function AuthDialog({
       await onSuccess();
       toast.success(
         mode === "register"
-          ? "가입이 완료됐어요."
+          ? "가입 신청을 접수했어요. 운영자 승인 후 활동할 수 있어요."
           : "로그인했어요.",
       );
     } catch (e) {
@@ -61,12 +61,12 @@ export function AuthDialog({
         <PingMark />
         <DialogTitle>
           {mode === "register"
-            ? "회원가입"
+            ? "가입 신청"
             : "로그인"}
         </DialogTitle>
         <DialogDescription>
           {mode === "register"
-            ? "톡방에서 사용하는 닉네임과 비밀번호를 입력해주세요."
+            ? "톡방 닉네임과 비밀번호를 입력해주세요. 운영자 승인 후 활동할 수 있어요."
             : "가입할 때 사용한 닉네임과 비밀번호를 입력해주세요."}
         </DialogDescription>
         <form onSubmit={submit} key={mode}>
@@ -126,7 +126,7 @@ export function AuthDialog({
             ) : (
               <PingIcon size={18} />
             )}{" "}
-            {mode === "register" ? "가입하기" : "로그인하기"}
+            {mode === "register" ? "가입 신청하기" : "로그인하기"}
           </button>
         </form>
         <button
@@ -256,6 +256,7 @@ export function ComposeDialog({
                 </span>
                 <span>{message.length} / 300</span>
               </div>
+              <p className="form-hint">수신자가 신고하면 관리자에게만 작성자가 표시돼요.</p>
               {error && (
                 <p className="form-error" role="alert">
                   {error}
@@ -303,7 +304,7 @@ export function ReportDialog({
       <DialogContent className="hogam-dialog">
         <DialogTitle>이 칭찬핑을 신고할까요?</DialogTitle>
         <DialogDescription>
-          불편했던 이유를 알려주세요. 운영자가 확인합니다.
+          신고 사유와 메시지가 관리자에게 전달됩니다. 작성자는 관리자에게만 표시되며, 신고한 회원에게는 공개되지 않아요.
         </DialogDescription>
         <form
           onSubmit={async (e) => {

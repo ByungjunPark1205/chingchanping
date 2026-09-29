@@ -4,6 +4,7 @@ import {
   integer,
   index,
   uniqueIndex,
+  type AnySQLiteColumn,
 } from "drizzle-orm/sqlite-core";
 export const users = sqliteTable(
   "users",
@@ -18,6 +19,8 @@ export const users = sqliteTable(
     createdAt: integer("created_at").notNull(),
     isActive: integer("is_active").notNull().default(1),
     lastReadAt: integer("last_read_at").notNull().default(0),
+    approvalStatus: text("approval_status").notNull().default("approved"),
+    mergedInto: text("merged_into").references((): AnySQLiteColumn => users.id),
   },
   (t) => [uniqueIndex("idx_users_nickname_key").on(t.nicknameKey)],
 );
@@ -100,4 +103,15 @@ export const adminBootstrap = sqliteTable("admin_bootstrap", {
   userId: text("user_id")
     .notNull()
     .references(() => users.id),
+});
+
+export const memberActions = sqliteTable("member_actions", {
+  id: text("id").primaryKey(),
+  actorId: text("actor_id").notNull().references(() => users.id),
+  action: text("action").notNull(),
+  sourceId: text("source_id").notNull().references(() => users.id),
+  targetId: text("target_id").references(() => users.id),
+  sourceNickname: text("source_nickname").notNull(),
+  targetNickname: text("target_nickname"),
+  createdAt: integer("created_at").notNull(),
 });
