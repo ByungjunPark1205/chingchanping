@@ -14,6 +14,7 @@ export function PingMap({ pings, weeklyIds, example, onLike }: {
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [pinnedId, setPinnedId] = useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = useState(8);
   const mapRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const outside = (event: PointerEvent) => {
@@ -25,6 +26,19 @@ export function PingMap({ pings, weeklyIds, example, onLike }: {
     document.addEventListener("pointerdown", outside);
     return () => document.removeEventListener("pointerdown", outside);
   }, []);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const updateCapacity = () => {
+      const columns = Math.max(1, Math.floor((map.clientWidth - 36) / 130));
+      const rows = Math.max(1, Math.floor((map.clientHeight - 104) / 112));
+      setVisibleCount(Math.min(pings.length, columns * rows));
+    };
+    updateCapacity();
+    const observer = new ResizeObserver(updateCapacity);
+    observer.observe(map);
+    return () => observer.disconnect();
+  }, [pings.length]);
 
   return (
     <div className="compliment-map" ref={mapRef}>
@@ -32,7 +46,7 @@ export function PingMap({ pings, weeklyIds, example, onLike }: {
       <div className="map-heading"><span>칭찬 지도</span></div>
       <span className="map-compass" aria-hidden="true"><Compass size={28} /><small>N</small></span>
       <div className="map-points">
-        {pings.slice(0, 8).map((ping, index) => {
+        {pings.slice(0, visibleCount).map((ping, index) => {
           const open = openId === ping.id;
           const rank = weeklyIds.indexOf(ping.id) + 1;
           const popupId = `map-compliment-${ping.id}`;

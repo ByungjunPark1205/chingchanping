@@ -113,7 +113,7 @@ body { background: radial-gradient(ellipse at 78% 0, #152c3b 0, transparent 55%)
 
 /* The map stays compact; only the focused ping reveals its full message. */
 .ping-board.map-board { background: none; min-height: 0; height: auto; overflow: visible; }
-.compliment-map { position: relative; height: 540px; isolation: isolate; border-block: 1px solid #254450; }
+.compliment-map { position: relative; height: clamp(530px, 62vh, 700px); isolation: isolate; border-block: 1px solid #254450; }
 .rift-landscape { position: absolute; inset: 0; overflow: hidden; background: #112b31; pointer-events: none; z-index: -1; }
 .rift-art { width: 100%; height: 100%; display: block; }
 .map-heading { position: absolute; top: 22px; left: 24px; pointer-events: none; display: grid; gap: 3px; }
@@ -121,17 +121,17 @@ body { background: radial-gradient(ellipse at 78% 0, #152c3b 0, transparent 55%)
 .map-heading small { color: #668f98; font-size: 10px; letter-spacing: .3px; }
 .map-compass { position: absolute; top: 22px; right: 24px; color: #88b1b18c; display: grid; place-items: center; }
 .map-compass small { font-size: 8px; margin-top: 3px; }
-.map-points { position: absolute; inset: 0; }
-.map-point { --pin: #69d2da; position: absolute; width: 110px; margin-left: -55px; margin-top: -40px; z-index: 2; }
+.map-points { position: absolute; inset: 58px 18px 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); grid-auto-rows: 112px; align-content: space-evenly; gap: 8px; overflow: visible; }
+.map-point { --pin: #69d2da; position: relative; width: 110px; margin: 0 auto; z-index: 2; }
 .map-point.is-open { z-index: 20; }
-.map-point.point-0 { left: 16%; top: 27%; --pin: #dfc485; }
-.map-point.point-1 { left: 41%; top: 22%; --pin: #8fb6f1; }
-.map-point.point-2 { left: 67%; top: 25%; --pin: #a899dd; }
-.map-point.point-3 { left: 87%; top: 45%; --pin: #6ddace; }
-.map-point.point-4 { left: 17%; top: 67%; --pin: #96c79d; }
-.map-point.point-5 { left: 43%; top: 54%; --pin: #77acd9; }
-.map-point.point-6 { left: 68%; top: 73%; --pin: #d9a875; }
-.map-point.point-7 { left: 88%; top: 78%; --pin: #8bc7bb; }
+.map-point.point-0 { --pin: #dfc485; }
+.map-point.point-1 { --pin: #8fb6f1; }
+.map-point.point-2 { --pin: #a899dd; }
+.map-point.point-3 { --pin: #6ddace; }
+.map-point.point-4 { --pin: #96c79d; }
+.map-point.point-5 { --pin: #77acd9; }
+.map-point.point-6 { --pin: #d9a875; }
+.map-point.point-7 { --pin: #8bc7bb; }
 .map-pin { width: 100%; padding: 5px 0 12px; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--pin); background: transparent; border: 0; border-radius: 12px; }
 .map-pin:focus-visible { outline-color: var(--pin); outline-offset: 4px; }
 .map-pin-symbol { position: relative; display: grid; place-items: center; height: 57px; width: 68px; transition: transform .2s ease; }
@@ -170,14 +170,6 @@ body { background: radial-gradient(ellipse at 78% 0, #152c3b 0, transparent 55%)
   .map-heading > span { font-size: 11px; letter-spacing: 1px; }
   .map-heading small { font-size: 9px; }
   .map-compass { right: 14px; top: 17px; }
-  .map-point.point-0 { left: 16%; top: 22%; }
-  .map-point.point-1 { left: 52%; top: 22%; }
-  .map-point.point-2 { left: 86%; top: 29%; }
-  .map-point.point-3 { left: 27%; top: 48%; }
-  .map-point.point-4 { left: 63%; top: 48%; }
-  .map-point.point-5 { left: 88%; top: 58%; }
-  .map-point.point-6 { left: 16%; top: 77%; }
-  .map-point.point-7 { left: 54%; top: 78%; }
   .point-2 .map-popup, .point-5 .map-popup { right: 0; left: auto; transform: none; }
   .point-6 .map-popup, .point-7 .map-popup { left: 0; transform: none; }
   .map-pin-name { max-width: 120px; }
