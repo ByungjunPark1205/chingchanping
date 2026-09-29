@@ -208,7 +208,36 @@ try {
   await action("promote", "peer", admin, 409);
   const promotionAdminData = (await request("/admin", null, admin)).data;
   assert.equal(promotionAdminData.actions.some((a) => a.action === "promote" && a.sourceNickname === names.peer), true);
-  console.log(`PASS: ${checks} API checks plus assertions for migration, approval, removal, merge rollback/concurrency, recipient-only reports, admin-only author disclosure, likes and sessions.`);
+
+  // Member limits remain atomic, even if a request claims administrator status.
+  const limitedMember = session("alternate");
+  const limitMessage = { ...message, receiverId: "target", role: "admin", isAdmin: true };
+  const burst = await Promise.all(Array.from({ length: 4 }, () => fetch(origin + "/api/compliments", {
+    method: "POST", headers: { Origin: origin, "Content-Type": "application/json", Cookie: limitedMember }, body: JSON.stringify(limitMessage),
+  })));
+  assert.deepEqual(burst.map((response) => response.status).sort(), [201, 429, 429, 429]); checks += burst.length;
+  const dayStart = Math.floor((Date.now() + 9 * 3600000) / 86400000) * 86400000 - 9 * 3600000;
+  for (let i = 0; i < 9; i++) {
+    db.prepare("INSERT INTO compliments VALUES (?,?,?,?,?,?,0)").run(`member-limit-${i}`, "alternate", i < 2 ? "target" : "peer", message.message, message.category, dayStart);
+    if (i === 1) await request("/compliments", limitMessage, limitedMember, 429);
+  }
+  // A new recipient avoids the cooldown and recipient cap, isolating the daily total.
+  await request("/compliments", { ...limitMessage, receiverId: "admin" }, limitedMember, 429);
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM compliments WHERE sender_id='alternate'").get().n, 10);
+
+  // Both original and newly appointed admins can exceed all three send limits.
+  for (const [sender, cookie] of [["admin", admin], ["peer", peer]]) {
+    const sent = db.prepare("SELECT COUNT(*) AS n FROM compliments WHERE sender_id=?").get(sender).n;
+    for (let i = 0; i < 12; i++) await request("/compliments", { ...message, receiverId: "alternate" }, cookie, 201);
+    assert.equal(db.prepare("SELECT COUNT(*) AS n FROM compliments WHERE sender_id=?").get(sender).n, sent + 12);
+  }
+  await request("/compliments", { ...message, receiverId: "admin" }, admin, 400);
+  await request("/compliments", { ...message, message: "짧음" }, admin, 400);
+  await request("/compliments", { ...message, category: "없는 유형" }, admin, 400);
+  await request("/compliments", { ...message, receiverId: pendingId }, admin, 404);
+  await request("/compliments", { ...message, receiverId: "removed" }, admin, 404);
+  await request("/compliments", { ...message, receiverId: "source" }, admin, 404);
+  console.log(`PASS: ${checks} API checks plus assertions for migration, approval, removal, merge rollback/concurrency, recipient-only reports, admin-only author disclosure, member send limits, unlimited admin sending, likes and sessions.`);
   passed = true;
 } finally {
   db.close();

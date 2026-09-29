@@ -571,6 +571,7 @@ export function Chingchanping({
         <ComposeDialog
           key={recipient.id}
           member={recipient}
+          isAdmin={viewer.role === "admin"}
           onClose={() => setRecipient(null)}
           onSuccess={refresh}
         />
@@ -604,8 +605,9 @@ export function Chingchanping({
             </p>
           </div>
           <p className="muted">
-            한 사람에게는 1분에 한 번, 하루 3번까지, 전체 하루 10번까지 보낼 수
-            있어요.
+            {viewer?.role === "admin"
+              ? "관리자 계정은 전송 횟수와 대기시간 제한이 없어요."
+              : "한 사람에게는 1분에 한 번, 하루 3번까지, 전체 하루 10번까지 보낼 수 있어요."}
           </p>
           <button
             className="primary-button full"

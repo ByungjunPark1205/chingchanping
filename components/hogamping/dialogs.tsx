@@ -148,10 +148,12 @@ export function AuthDialog({
 
 export function ComposeDialog({
   member,
+  isAdmin,
   onClose,
   onSuccess,
 }: {
   member: Member | null;
+  isAdmin: boolean;
   onClose: () => void;
   onSuccess: () => Promise<void>;
 }) {
@@ -274,7 +276,7 @@ export function ComposeDialog({
                 {phase === "sending" ? "보내는 중…" : "칭찬핑 보내기"}
               </button>
               <p className="form-hint">
-                한 사람에게 하루 3번 · 전체 하루 10번까지
+                {isAdmin ? "관리자 계정은 전송 횟수와 대기시간 제한이 없어요." : "한 사람에게 하루 3번 · 전체 하루 10번까지"}
               </p>
             </form>
           </>

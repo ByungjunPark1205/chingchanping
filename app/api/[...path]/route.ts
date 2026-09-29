@@ -244,9 +244,17 @@ async function post(req: Request) {
     if (!(await member(receiverId))) fail(404, "해당 사용자를 찾을 수 없어요.");
     const id = crypto.randomUUID();
     const day = startOfSeoulDay(now);
-    // The guard and insert are a single SQLite statement: concurrent requests cannot bypass limits.
+    // Check the sender's current DB role inside the insert. Only admins bypass
+    // send limits; account eligibility and ordinary-member limits stay atomic.
     const result = await run(
-      `INSERT INTO compliments (id,sender_id,receiver_id,message,category,created_at,is_hidden) SELECT ?,?,?,?,?,?,0 WHERE EXISTS(SELECT 1 FROM users WHERE id=? AND is_active=1 AND approval_status='approved' AND merged_into IS NULL) AND EXISTS(SELECT 1 FROM users WHERE id=? AND is_active=1 AND approval_status='approved' AND merged_into IS NULL) AND NOT EXISTS(SELECT 1 FROM compliments WHERE sender_id=? AND receiver_id=? AND created_at>?) AND (SELECT COUNT(*) FROM compliments WHERE sender_id=? AND receiver_id=? AND created_at>=?)<3 AND (SELECT COUNT(*) FROM compliments WHERE sender_id=? AND created_at>=?)<10`,
+      `INSERT INTO compliments (id,sender_id,receiver_id,message,category,created_at,is_hidden) SELECT ?,?,?,?,?,?,0
+      WHERE EXISTS(SELECT 1 FROM users WHERE id=? AND is_active=1 AND approval_status='approved' AND merged_into IS NULL)
+      AND EXISTS(SELECT 1 FROM users WHERE id=? AND is_active=1 AND approval_status='approved' AND merged_into IS NULL)
+      AND (EXISTS(SELECT 1 FROM users WHERE id=? AND role='admin') OR (
+        NOT EXISTS(SELECT 1 FROM compliments WHERE sender_id=? AND receiver_id=? AND created_at>?)
+        AND (SELECT COUNT(*) FROM compliments WHERE sender_id=? AND receiver_id=? AND created_at>=?)<3
+        AND (SELECT COUNT(*) FROM compliments WHERE sender_id=? AND created_at>=?)<10
+      ))`,
       id,
       user.id,
       receiverId,
@@ -255,6 +263,7 @@ async function post(req: Request) {
       now,
       user.id,
       receiverId,
+      user.id,
       user.id,
       receiverId,
       now - 60000,
