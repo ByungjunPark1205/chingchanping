@@ -17,6 +17,7 @@
     "test:feed": "node scripts/verify-feed.mjs",
     "test:members": "node scripts/verify-members.mjs",
     "test:signup-alerts": "node scripts/verify-signup-alerts.mjs",
+    "test:compliment-alerts": "node scripts/verify-compliment-alerts.mjs",
     "test:limits": "node scripts/verify-limits.mjs",
     "test:cleanup": "node scripts/reset-local-tests.mjs",
     "typecheck": "tsc --noEmit"

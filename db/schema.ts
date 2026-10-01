@@ -45,6 +45,15 @@ export const compliments = sqliteTable(
     index("idx_compliments_hidden_created").on(t.isHidden, t.createdAt),
   ],
 );
+export const complimentNotifications = sqliteTable(
+  "compliment_notifications",
+  {
+    sequence: integer("sequence").primaryKey({ autoIncrement: true }),
+    complimentId: text("compliment_id").notNull().references(() => compliments.id),
+  },
+  (t) => [uniqueIndex("idx_compliment_notifications_compliment").on(t.complimentId)],
+);
+
 export const complimentLikes = sqliteTable(
   "compliment_likes",
   {
