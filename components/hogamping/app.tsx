@@ -43,7 +43,7 @@ import { PingMap } from "./ping-map";
 import { AuthDialog, ComposeDialog, ReportDialog } from "./dialogs";
 import { SettingsView } from "./settings";
 import { AdminView } from "./admin";
-import { api } from "@/lib/client";
+import { api, ApiError } from "@/lib/client";
 import { examplePings } from "@/lib/examples";
 import { type Member, type Viewer, type Ping, type Page } from "@/lib/types";
 
@@ -81,6 +81,22 @@ export function Chingchanping({
   const [privateError, setPrivateError] = useState("");
   const [privateLoading, setPrivateLoading] = useState(false);
 
+  const clearAccount = useCallback(() => {
+    setViewer(null);
+    setPings([]);
+    setWeeklyPings([]);
+    setMembers([]);
+    setStats({ pings: 0, members: 0, today: 0 });
+    setProfile(null);
+    setPrivatePings([]);
+    setPrivateError("");
+    setPrivateLoading(false);
+    setLoading(false);
+    setRecipient(null);
+    setReport(null);
+    setGuide(false);
+  }, []);
+
   const refresh = useCallback(async () => {
     const sequence = ++refreshSequence.current;
     try {
@@ -99,11 +115,15 @@ export function Chingchanping({
       setStats(data.stats);
       setError("");
     } catch (e) {
-      if (sequence === refreshSequence.current) setError((e as Error).message);
+      if (sequence !== refreshSequence.current) return;
+      if (e instanceof ApiError && e.status === 401) {
+        clearAccount();
+        setError("");
+      } else setError((e as Error).message);
     } finally {
       if (sequence === refreshSequence.current) setLoading(false);
     }
-  }, [homeQuery]);
+  }, [homeQuery, clearAccount]);
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Fetch initial data and hydrate the browser-only preference after SSR.
     void refresh();
@@ -119,15 +139,21 @@ export function Chingchanping({
       if (document.visibilityState === "visible") void refresh();
     };
     document.addEventListener("visibilitychange", handle);
-    return () => document.removeEventListener("visibilitychange", handle);
+    window.addEventListener("focus", handle);
+    return () => {
+      document.removeEventListener("visibilitychange", handle);
+      window.removeEventListener("focus", handle);
+    };
   }, [refresh]);
   useEffect(() => {
     let cancelled = false;
     const id = userId ?? viewer?.id;
-    if ((page !== "profile" && page !== "received") || !id) return;
+    if (!viewer?.id || (page !== "profile" && page !== "received") || !id) return;
     if (!userId && viewer?.approvalStatus === "pending") return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Reset the request indicator when the profile or authenticated account changes.
     setPrivateLoading(true);
+    setProfile(null);
+    setPrivatePings([]);
     setPrivateError("");
     void api<{ member: Member; pings: Ping[] }>(
       page === "received" ? "/received" : `/users/${encodeURIComponent(id)}`,
@@ -144,7 +170,11 @@ export function Chingchanping({
         }
       })
       .catch((e) => {
-        if (!cancelled) setPrivateError(e.message);
+        if (cancelled) return;
+        if (e instanceof ApiError && e.status === 401) {
+          ++refreshSequence.current;
+          clearAccount();
+        } else setPrivateError(e.message);
       })
       .finally(() => {
         if (!cancelled) setPrivateLoading(false);
@@ -152,7 +182,7 @@ export function Chingchanping({
     return () => {
       cancelled = true;
     };
-  }, [page, userId, viewer?.id, viewer?.approvalStatus, pings]);
+  }, [page, userId, viewer?.id, viewer?.approvalStatus, pings, clearAccount]);
   function compose(member: Member) {
     if (viewer?.approvalStatus === "pending") { toast("가입 승인 후 칭찬을 보낼 수 있어요."); return; }
     if (!viewer) {
@@ -178,7 +208,7 @@ export function Chingchanping({
         };
       }
     ).modelContext;
-    if (!context?.registerTool) return;
+    if (!context?.registerTool || !viewer) return;
     const lifecycle = new AbortController();
     const register = (tool: Tool) => {
       try {
@@ -192,7 +222,7 @@ export function Chingchanping({
     register({
       name: "search_community_members",
       description:
-        "Search registered community members by chat or in-game nickname. Returns public profiles only.",
+        "Search registered community members by chat or in-game nickname. Requires login and returns member profiles without author identities.",
       inputSchema: {
         type: "object",
         properties: { query: { type: "string", maxLength: 40 } },
@@ -247,8 +277,8 @@ export function Chingchanping({
   async function logout() {
     try {
       await api("/auth/logout", {});
-      setViewer(null);
-      setPrivatePings([]);
+      ++refreshSequence.current;
+      clearAccount();
       await refresh();
       toast("로그아웃했어요.");
     } catch (e) {
@@ -262,14 +292,14 @@ export function Chingchanping({
       await api("/compliments/like", { complimentId: ping.id, liked: !ping.liked });
       await refresh();
     } catch (e) {
+      if (e instanceof ApiError && e.status === 401) {
+        ++refreshSequence.current;
+        clearAccount();
+      }
       toast.error((e as Error).message);
     }
   }
-  const needsLogin =
-    !viewer &&
-    (page === "received" ||
-      page === "settings" ||
-      (page === "profile" && !userId));
+  const needsLogin = !viewer;
   return (
     <SidebarProvider
       className={`app-shell ${!motion ? "motion-off" : ""}`}
@@ -372,7 +402,8 @@ export function Chingchanping({
               <button onClick={refresh}>다시 연결</button>
             </div>
           )}
-          {page === "home" && (
+          {needsLogin && loading && <Loading />}
+          {page === "home" && viewer && (
             <HomeBoard
               pings={pings}
               weeklyPings={weeklyPings}
@@ -391,7 +422,7 @@ export function Chingchanping({
               onGuide={() => setGuide(true)}
             />
           )}
-          {page === "send" && (
+          {page === "send" && viewer && (
             <MemberDirectory
               members={members}
               viewer={viewer}
@@ -403,11 +434,9 @@ export function Chingchanping({
             <div className="login-gate">
               <PingMark />
               <h1>
-                {page === "received"
-                  ? "받은 칭찬을 확인하려면 로그인해주세요"
-                  : "로그인이 필요해요"}
+                로그인 후 이용해주세요
               </h1>
-              <p>가입할 때 사용한 톡방 닉네임과 비밀번호를 입력해주세요.</p>
+              <p>칭찬과 회원 목록은 로그인한 회원만 볼 수 있습니다.</p>
               <button
                 className="primary-button"
                 onClick={() => setAuth("login")}
@@ -418,7 +447,7 @@ export function Chingchanping({
                 className="text-button"
                 onClick={() => setAuth("register")}
               >
-                계정이 없나요? 가입하기
+                가입하기
               </button>
             </div>
           )}
@@ -514,7 +543,7 @@ export function Chingchanping({
               logout={logout}
             />
           )}
-          {page === "admin" && (
+          {page === "admin" && viewer && (
             <AdminView
               viewer={viewer}
               loading={loading}
@@ -522,7 +551,7 @@ export function Chingchanping({
               refresh={refresh}
             />
           )}
-          {page === "notfound" && (
+          {page === "notfound" && viewer && (
             <Empty
               title="페이지를 찾을 수 없어요"
               text="주소를 확인하거나 홈으로 이동해주세요."
@@ -576,7 +605,7 @@ export function Chingchanping({
           onSuccess={refresh}
         />
       )}
-      <ReportDialog key={report?.id ?? "closed"} ping={report} onClose={() => setReport(null)} />
+      {viewer && <ReportDialog key={report?.id ?? "closed"} ping={report} onClose={() => setReport(null)} />}
       <Dialog open={guide} onOpenChange={setGuide}>
         <DialogContent className="hogam-dialog">
           <DialogTitle>칭찬핑 이용 안내</DialogTitle>

@@ -35,7 +35,7 @@ async function start() {
   child.stdout.on("data", (s) => { logs += s; }); child.stderr.on("data", (s) => { logs += s; });
   for (let i = 0; i < 100; i++) {
     if (child.exitCode !== null) throw Error(logs);
-    try { if ((await fetch(origin + "/api/home")).ok) return; } catch { /* starting */ }
+    try { if ((await fetch(origin)).ok) return; } catch { /* starting */ }
     await new Promise((r) => setTimeout(r, 100));
   }
   throw Error(logs);
@@ -91,12 +91,12 @@ try {
   await request("/compliments", message, applicant.cookie, 201);
   await action("approve", applicantId, admin, 409);
   await action("deactivate", applicantId, admin);
-  assert.equal((await request("/home", null, applicant.cookie)).data.viewer, null);
+  await request("/home", null, applicant.cookie, 401);
   await request("/compliments", message, applicant.cookie, 401);
   await request("/auth/login", { chatNickname: "승인대기회원", password: pass }, null, 401);
   await request("/auth/register", { chatNickname: "승인대기회원", password: pass }, null, 409);
   await action("activate", applicantId, admin);
-  assert.equal((await request("/home", null, applicant.cookie)).data.viewer, null);
+  await request("/home", null, applicant.cookie, 401);
   await request("/auth/login", { chatNickname: "승인대기회원", password: pass });
   await action("activate", "target", admin, 409);
 
@@ -134,7 +134,7 @@ try {
   assert.equal(db.prepare("SELECT created_at FROM compliment_likes WHERE compliment_id='outgoing-source'").get().created_at, now - 14 * 86400000);
   assert.equal(count("reports"), 1);
   const report = db.prepare("SELECT * FROM reports").get(); assert.equal(report.reporter_id, "target"); assert.equal(report.status, "pending"); assert.match(report.reason, /첫 번째 신고 사유/); assert.match(report.reason, /두 번째 신고 사유/);
-  for (const cookie of [oldSource, oldTarget]) assert.equal((await request("/home", null, cookie)).data.viewer, null);
+  for (const cookie of [oldSource, oldTarget]) await request("/home", null, cookie, 401);
   await request("/auth/login", { chatNickname: names.source, password: sourcePass }, null, 401);
   await request("/auth/login", { chatNickname: names.target, password: sourcePass }, null, 401);
   const targetLogin = await request("/auth/login", { chatNickname: names.target, password: pass });
@@ -142,7 +142,7 @@ try {
   await action("activate", "source", admin, 409); await action("restore", "between", admin, 400);
   const received = (await request("/received", null, targetLogin.cookie)).data.pings;
   assert.deepEqual(received.map((p) => p.id).sort(), ["incoming-source", "incoming-target"]);
-  home = (await request("/home")).data;
+  home = (await request("/home", null, admin)).data;
   assert.equal(home.members.some((u) => u.id === "source"), false);
   assert.equal(home.pings.some((p) => p.id === "between" || p.id === "hidden"), false);
   assert.equal(JSON.stringify(home).includes("password_hash"), false);
@@ -186,7 +186,9 @@ try {
   assert.equal(filedReport.reporter, names.target); assert.equal(filedReport.reason, reportBody.reason);
   assert.equal(filedReport.status, "pending"); assert.equal(filedReport.isHidden, 0);
   noAuthors(moderation.pings);
-  for (const viewerCookie of [undefined, peer, targetLogin.cookie, admin]) {
+  await request("/home", null, null, 401);
+  await request("/users/target", null, null, 401);
+  for (const viewerCookie of [pendingLogin.cookie, peer, targetLogin.cookie, admin]) {
     const feed = (await request("/home", null, viewerCookie)).data;
     noAuthors(feed.pings); noAuthors(feed.weeklyPings);
     noAuthors((await request("/users/target", null, viewerCookie)).data.pings);
@@ -198,7 +200,7 @@ try {
   moderation = (await request("/admin", null, admin)).data;
   assert.equal(moderation.reports.find((r) => r.id === filedReport.id).status, "resolved");
   assert.equal(moderation.reports.find((r) => r.id === filedReport.id).isHidden, 1);
-  assert.equal((await request("/home")).data.pings.some((p) => p.id === "report-private"), false);
+  assert.equal((await request("/home", null, admin)).data.pings.some((p) => p.id === "report-private"), false);
   // Leave a pending recipient report to inspect in the local UI.
   insert("report-ui", "peer", "target");
   await request("/reports", { ...reportBody, complimentId: "report-ui" }, targetLogin.cookie, 201);

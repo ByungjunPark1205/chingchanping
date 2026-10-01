@@ -37,7 +37,7 @@ async function start(secret) {
   child.stdout.on("data", (s) => { logs += s; }); child.stderr.on("data", (s) => { logs += s; });
   for (let i = 0; i < 100; i++) {
     if (child.exitCode !== null) throw Error(logs);
-    try { if ((await fetch(origin + "/api/home")).ok) return; } catch { /* starting */ }
+    try { if ((await fetch(origin)).ok) return; } catch { /* starting */ }
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
   throw Error(logs);
@@ -61,6 +61,8 @@ try {
   await request("/notifications/compliments", 401, { Authorization: "Bearer " + "b".repeat(64) });
   await request("/notifications/compliments?token=" + "a".repeat(64), 401, {});
   await request("/admin", 401);
+  await request("/home", 401);
+  await request("/users/receiver", 401);
   await request("/compliments", 401, auth, { receiverId: "receiver", message: "권한을 확인하는 테스트입니다.", category: "매너가 좋아요" });
   assert.deepEqual(await alerts(), { compliments: [], cursor: 0, hasMore: false });
   for (const value of ["-1", "1.5", "1e2", "9007199254740992", "", "1"]) await request("/notifications/compliments?after=" + value, 400);

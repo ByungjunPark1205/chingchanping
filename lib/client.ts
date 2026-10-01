@@ -1,3 +1,10 @@
+export class ApiError extends Error {
+  constructor(message: string, public status: number) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 export async function api<T = Record<string, unknown>>(
   path: string,
   data?: unknown,
@@ -6,11 +13,12 @@ export async function api<T = Record<string, unknown>>(
   const response = await fetch(`/api${path}`, {
     method: method ?? (data ? "POST" : "GET"),
     credentials: "same-origin",
+    cache: "no-store",
     headers: data ? { "Content-Type": "application/json" } : undefined,
     body: data ? JSON.stringify(data) : undefined,
   });
   const result = (await response.json()) as { error?: string };
   if (!response.ok)
-    throw new Error(result.error || "잠시 연결이 어려워요. 다시 시도해주세요.");
+    throw new ApiError(result.error || "잠시 연결이 어려워요. 다시 시도해주세요.", response.status);
   return result as T;
 }

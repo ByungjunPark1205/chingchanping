@@ -17,7 +17,7 @@ await once(probe, "listening");
 const port = probe.address().port;
 await new Promise((resolve) => probe.close(resolve));
 const origin = `http://127.0.0.1:${port}`;
-let child, db, logs = "", checks = 0;
+let child, db, logs = "", checks = 0, feedCookie;
 async function start() {
   child = spawn(process.execPath, ["scripts/render-start.mjs"], {
     env: { ...process.env, PORT: String(port), RENDER_DISK_PATH: dataRoot, ADMIN_SETUP_TOKEN: "test-only-initial-setup-token", RENDER: "true" },
@@ -27,7 +27,7 @@ async function start() {
   child.stderr.on("data", (chunk) => { logs += chunk; });
   for (let i = 0; i < 100; i++) {
     if (child.exitCode !== null) throw Error(`Server exited: ${logs}`);
-    try { if ((await fetch(origin + "/api/home")).ok) return; } catch { /* starting */ }
+    try { if ((await fetch(origin)).ok) return; } catch { /* starting */ }
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
   throw Error(`Server startup timed out: ${logs}`);
@@ -39,7 +39,7 @@ async function stop() {
     await exit;
   }
 }
-async function request(route, body, cookie, expected = 200, headers = {}) {
+async function request(route, body, cookie = feedCookie, expected = 200, headers = {}) {
   const response = await fetch(origin + "/api" + route, {
     method: body ? "POST" : "GET",
     headers: { ...(body ? { "Content-Type": "application/json", Origin: origin } : {}), ...(cookie ? { Cookie: cookie } : {}), ...headers },
@@ -52,7 +52,9 @@ async function request(route, body, cookie, expected = 200, headers = {}) {
 }
 try {
   await start();
-  assert.deepEqual((await request("/home")).data.weeklyPings, []);
+  assert.deepEqual(Object.keys((await request("/home", undefined, null, 401)).data), ["error"]);
+  await request("/users/B", undefined, null, 401);
+  await request("/users/nonexistent", undefined, null, 401);
   assert.equal((await fetch(origin)).status, 200);
   db = new DatabaseSync(path.join(dataRoot, "chingchanping.sqlite"));
   const registration = await request("/auth/register", { chatNickname: "가입검증", password: "Nickname-only-password-2026" }, null, 201);
@@ -80,6 +82,7 @@ try {
   }
   const login = await request("/auth/login", { chatNickname: "테스트A", password });
   const cookie = login.response.headers.get("set-cookie").split(";")[0];
+  feedCookie = cookie;
   const secure = await request("/auth/login", { chatNickname: "테스트B", password }, null, 200, { "X-Forwarded-Proto": "https", Origin: origin.replace("http:", "https:") });
   assert.match(secure.response.headers.get("set-cookie"), /; Secure/);
   const insert = (id, createdAt, receiver = "B", hidden = 0) => db.prepare("INSERT INTO compliments (id,sender_id,receiver_id,message,category,created_at,is_hidden) VALUES (?,'A',?,?,?, ?,?)").run(id, receiver, `좋은 행동을 칭찬해요 ${id}`, "매너가 좋아요", createdAt, hidden);
@@ -101,7 +104,24 @@ try {
   let home = (await request("/home", undefined, cookie)).data;
   assert.equal(home.pings.find((p) => p.id === "recent").likes, 1);
   assert.equal(home.pings.find((p) => p.id === "recent").liked, true);
-  assert.equal((await request("/home")).data.pings.find((p) => p.id === "recent").liked, false);
+  assert.equal((await request("/home", undefined, secure.response.headers.get("set-cookie").split(";")[0])).data.pings.find((p) => p.id === "recent").liked, false);
+  for (const route of ["/home", "/home?start=2024-02-29&end=2024-02-29", "/users/B", "/received"]) {
+    for (const guestCookie of [null, "hogamping_session=invalid", "hogamping_session=" + "0".repeat(64)]) {
+      const blocked = await request(route, undefined, guestCookie, 401);
+      assert.deepEqual(Object.keys(blocked.data), ["error"]);
+      assert.match(blocked.response.headers.get("cache-control"), /no-store/);
+    }
+  }
+  const expired = await request("/auth/login", { chatNickname: "테스트D", password }, null);
+  db.prepare("UPDATE sessions SET expires_at=1 WHERE user_id='D'").run();
+  const expiredCookie = expired.response.headers.get("set-cookie").split(";")[0];
+  await request("/home", undefined, expiredCookie, 401);
+  await request("/users/B", undefined, expiredCookie, 401);
+  for (const route of ["/", "/send", "/user/B", "/received"]) {
+    const html = await (await fetch(origin + route)).text();
+    assert.equal(html.includes("좋은 행동을 칭찬해요 recent"), false);
+    assert.equal(html.includes("테스트B"), false);
+  }
   const firstLikeAt = db.prepare("SELECT created_at FROM compliment_likes WHERE compliment_id='recent'").get().created_at;
   await request("/compliments/like", like, cookie);
   assert.equal(db.prepare("SELECT created_at FROM compliment_likes WHERE compliment_id='recent'").get().created_at, firstLikeAt);
@@ -158,7 +178,10 @@ try {
   assert.deepEqual(after.weeklyPings, before.weeklyPings);
   db = new DatabaseSync(path.join(dataRoot, "chingchanping.sqlite"));
   assert.equal(db.prepare("SELECT COUNT(*) AS n FROM _app_migrations").get().n, migrationCount);
-  console.log(`PASS: ${checks} API responses plus assertions for idempotent likes, login/CSRF, privacy, weekly ranking, date boundaries, moderation, >500 records, HTTPS cookies and restart persistence.`);
+  await request("/auth/logout", {}, cookie);
+  await request("/home", undefined, cookie, 401);
+  await request("/users/B", undefined, cookie, 401);
+  console.log(`PASS: ${checks} API responses plus assertions for login-only feeds/profiles, expired and logged-out sessions, private SSR, idempotent likes, CSRF, anonymity, weekly ranking, date boundaries, moderation, >500 records, HTTPS cookies and restart persistence.`);
 } finally {
   db?.close();
   await stop();

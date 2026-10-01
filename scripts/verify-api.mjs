@@ -154,7 +154,9 @@ const parallel = await Promise.all(
 assert.deepEqual(parallel.map((r) => r.status).sort(), [201, 429]);
 checks++;
 const sent = await parallel.find((r) => r.status === 201).json();
-const publicHome = (await request("/home")).data;
+await request("/home", null, null, null, 401);
+await request("/users/" + b.id, null, null, null, 401);
+const publicHome = (await request("/home", null, b)).data;
 const publicText = JSON.stringify(publicHome.pings);
 for (const privateKey of [
   "sender_id",
@@ -197,7 +199,7 @@ assert.equal("sender" in admin.pings.find((p) => p.id === sent.id), false);
 assert.equal(admin.reports.find((r) => r.complimentId === sent.id).sender, a.name);
 await request("/admin/action", { kind: "hide", id: sent.id }, a);
 assert.equal(
-  (await request("/home")).data.pings.some((p) => p.id === sent.id),
+  (await request("/home", null, b)).data.pings.some((p) => p.id === sent.id),
   false,
 );
 assert.equal(
@@ -208,11 +210,11 @@ assert.equal(
 );
 await request("/admin/action", { kind: "restore", id: sent.id }, a);
 assert.equal(
-  (await request("/home")).data.pings.some((p) => p.id === sent.id),
+  (await request("/home", null, b)).data.pings.some((p) => p.id === sent.id),
   true,
 );
 await request("/admin/action", { kind: "deactivate", id: c.id }, a);
-assert.equal((await request("/home", null, c)).data.viewer, null);
+await request("/home", null, c, null, 401);
 await request(
   "/auth/login",
   { chatNickname: c.name, password, remember: false },
@@ -246,7 +248,7 @@ await request(
   { currentPassword: password, password: password + "x" },
   b,
 );
-assert.equal((await request("/home", null, secondB)).data.viewer, null);
+await request("/home", null, secondB, null, 401);
 await request(
   "/profile",
   { chatNickname: b.name, lolNickname: "UPDATED#QA" },
@@ -254,7 +256,7 @@ await request(
   "PATCH",
 );
 assert.equal(
-  (await request("/users/" + b.id)).data.member.lolNickname,
+  (await request("/users/" + b.id, null, b)).data.member.lolNickname,
   "UPDATED#QA",
 );
 const logout = await request("/auth/logout", {}, b);

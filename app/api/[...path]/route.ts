@@ -4,7 +4,6 @@ import { all, database, first, run } from "@/lib/server/db";
 import {
   HttpError,
   fail,
-  currentUser,
   requireUser,
   requireAdmin,
   requireApproved,
@@ -50,7 +49,7 @@ async function get(req: Request) {
   if (path === "/notifications/signups") return json(await pendingSignupAlerts(req));
   if (path === "/notifications/compliments") return json(await newComplimentAlerts(req));
   if (path === "/home") {
-    const user = await currentUser(req);
+    const user = await requireUser(req);
     const range = dateRange(new URL(req.url).searchParams);
     const options = { ...range, viewerId: user?.id };
     const [me, board, weekly, people, numbers] = await Promise.all([
@@ -68,10 +67,10 @@ async function get(req: Request) {
     return json({ member: await member(user.id), pings: await pings({ receiverId: user.id, viewerId: user.id }) });
   }
   if (path.startsWith("/users/")) {
+    const user = await requireUser(req);
     const id = decodeURIComponent(path.slice(7));
     const person = await member(id);
     if (!person) fail(404, "해당 사용자를 찾을 수 없어요.");
-    const user = await currentUser(req);
     return json({ member: person, pings: await pings({ receiverId: id, viewerId: user?.id }) });
   }
   if (path === "/admin") {
