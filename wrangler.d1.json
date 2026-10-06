@@ -1,0 +1,11 @@
+{
+  "name": "chingchanping",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "chingchanping-db",
+      "database_id": "8b50268e-5e30-4633-accc-d6b90a7e2447",
+      "migrations_dir": "drizzle"
+    }
+  ]
+}

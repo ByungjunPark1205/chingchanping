@@ -17,8 +17,23 @@ export type Ping = {
   liked: boolean;
   weeklyLikes: number;
 };
+export type RankingMetric = "count" | "likes";
+export type MemberRanking = {
+  rank: number;
+  member: Member;
+  receivedCount: number;
+  likesCount: number;
+};
+export type RankingsResponse = {
+  metric: RankingMetric;
+  start: string | null;
+  end: string | null;
+  rankings: MemberRanking[];
+  totals: { members: number; pings: number; likes: number };
+};
 export type Page =
   | "home"
+  | "rankings"
   | "send"
   | "received"
   | "profile"

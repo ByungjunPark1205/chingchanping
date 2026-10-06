@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Compass,
   ThumbsUp,
+  Trophy,
   Home,
   List,
   LockKeyhole,
@@ -43,12 +44,14 @@ import { PingMap } from "./ping-map";
 import { AuthDialog, ComposeDialog, ReportDialog } from "./dialogs";
 import { SettingsView } from "./settings";
 import { AdminView } from "./admin";
+import { RankingsView } from "./rankings";
 import { api, ApiError } from "@/lib/client";
 import { examplePings } from "@/lib/examples";
 import { type Member, type Viewer, type Ping, type Page } from "@/lib/types";
 
 const nav = [
   { page: "home", href: "/", label: "홈", Icon: Home },
+  { page: "rankings", href: "/rankings", label: "순위", Icon: Trophy },
   { page: "send", href: "/send", label: "칭찬핑 보내기", Icon: PingIcon },
   { page: "received", href: "/received", label: "받은 칭찬핑", Icon: ThumbsUp },
   { page: "profile", href: "/profile", label: "내 프로필", Icon: UserRound },
@@ -96,6 +99,11 @@ export function Chingchanping({
     setReport(null);
     setGuide(false);
   }, []);
+
+  const expireAccount = useCallback(() => {
+    ++refreshSequence.current;
+    clearAccount();
+  }, [clearAccount]);
 
   const refresh = useCallback(async () => {
     const sequence = ++refreshSequence.current;
@@ -430,6 +438,9 @@ export function Chingchanping({
               compose={compose}
             />
           )}
+          {page === "rankings" && viewer && (
+            <RankingsView viewerId={viewer.id} onSessionExpired={expireAccount} />
+          )}
           {needsLogin && !loading && (
             <div className="login-gate">
               <PingMark />
@@ -698,6 +709,9 @@ function HomeBoard({
           <ArrowRight size={17} />
         </Link>
       </PageHeading>
+      <Link className="ranking-home-link" href="/rankings">
+        <Trophy size={17} /> 기간별 칭찬핑 순위 보기 <ArrowRight size={16} />
+      </Link>
       <section className={`board-section ${mode === "list" ? "list-view-section" : "map-view-section"}`} aria-label="칭찬핑 보드">
         <div className="board-toolbar">
           <div className="board-title">

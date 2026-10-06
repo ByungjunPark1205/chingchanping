@@ -15,6 +15,7 @@
     "db:generate": "drizzle-kit generate",
     "test:api": "node scripts/verify-api.mjs",
     "test:feed": "node scripts/verify-feed.mjs",
+    "test:rankings": "node scripts/verify-rankings.mjs",
     "test:members": "node scripts/verify-members.mjs",
     "test:signup-alerts": "node scripts/verify-signup-alerts.mjs",
     "test:compliment-alerts": "node scripts/verify-compliment-alerts.mjs",
