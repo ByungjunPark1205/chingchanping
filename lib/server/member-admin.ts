@@ -1,6 +1,6 @@
 import type { AdminUser, ManagedMember, MergePreview } from "@/lib/admin-types";
 import { all, database, first } from "./db";
-import { fail, type Account } from "./auth";
+import { digest, fail, hashPassword, type Account } from "./auth";
 
 const userSQL = `SELECT u.id,u.chat_nickname AS chatNickname,u.lol_nickname AS lolNickname,
   u.created_at AS createdAt,u.is_active AS isActive,u.approval_status AS approvalStatus,
@@ -77,6 +77,38 @@ export async function promoteMember(actor: Account, id: string) {
         .bind(crypto.randomUUID(), actor.id, id, source.chatNickname, Date.now()),
       db.prepare("UPDATE users SET role='admin' WHERE id=? AND role='member' AND is_active=1 AND approval_status='approved' AND merged_into IS NULL").bind(id),
     ]);
+  } catch (error) { actionError(error); }
+}
+
+export async function resetMemberPassword(actor: Account, id: string, nickname: string, nextPassword: string, actorTokenHash: string) {
+  const source = await first<Account>("SELECT * FROM users WHERE id=?", id);
+  if (!source) return fail(404, "회원을 찾을 수 없어요.");
+  if (id === actor.id || source.role === "admin") fail(403, "관리자 계정의 비밀번호는 본인이 설정에서 변경해주세요.");
+  if (!source.is_active || source.merged_into) fail(409, "활동 가능한 회원만 비밀번호를 초기화할 수 있어요.");
+  if (source.chat_nickname !== nickname) fail(409, "회원의 닉네임이 변경됐어요. 회원 목록에서 다시 확인해주세요.");
+  const hashed = await hashPassword(nextPassword);
+  const loginKey = `login-name:${await digest(source.nickname_key)}`;
+  const actionId = crypto.randomUUID();
+  const now = Date.now();
+  const db = database();
+  try {
+    // Audit, credential update and session revocation commit together. The
+    // trigger rechecks the target's role/status; the SELECT rechecks the actor's
+    // password and session after bcrypt, before authorizing any change.
+    const result = await db.batch([
+      db.prepare(`INSERT INTO member_actions (id,actor_id,action,source_id,source_nickname,created_at)
+        SELECT ?,?,'reset_password',?,?,? WHERE EXISTS (
+          SELECT 1 FROM users u JOIN sessions s ON s.user_id=u.id
+          WHERE u.id=? AND u.password_hash=? AND s.token_hash=? AND s.expires_at>?
+        )`).bind(actionId, actor.id, id, nickname, now, actor.id, actor.password_hash, actorTokenHash, now),
+      db.prepare("UPDATE users SET password_hash=? WHERE id=? AND EXISTS(SELECT 1 FROM member_actions WHERE id=?)")
+        .bind(hashed, id, actionId),
+      db.prepare("DELETE FROM sessions WHERE user_id=? AND EXISTS(SELECT 1 FROM member_actions WHERE id=?)")
+        .bind(id, actionId),
+      db.prepare("DELETE FROM rate_limits WHERE key=? AND EXISTS(SELECT 1 FROM member_actions WHERE id=?)")
+        .bind(loginKey, actionId),
+    ]);
+    if (!result[0].meta.changes) fail(401, "관리자 인증이 만료됐어요. 다시 로그인해주세요.");
   } catch (error) { actionError(error); }
 }
 

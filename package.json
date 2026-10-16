@@ -17,8 +17,10 @@
     "test:feed": "node scripts/verify-feed.mjs",
     "test:rankings": "node scripts/verify-rankings.mjs",
     "test:members": "node scripts/verify-members.mjs",
+    "test:password-reset": "node scripts/verify-password-reset.mjs",
     "test:signup-alerts": "node scripts/verify-signup-alerts.mjs",
     "test:compliment-alerts": "node scripts/verify-compliment-alerts.mjs",
+    "test:report-alerts": "node scripts/verify-report-alerts.mjs",
     "test:limits": "node scripts/verify-limits.mjs",
     "test:cleanup": "node scripts/reset-local-tests.mjs",
     "typecheck": "tsc --noEmit"

@@ -307,6 +307,11 @@ body { background: radial-gradient(ellipse at 78% 0, #152c3b 0, transparent 55%)
 .member-history li div { display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; }
 .member-history small { color: #91afbe; font-size: 11px; }
 .merge-dialog { max-height: 90dvh; overflow-y: auto; }
+.password-reset-dialog { max-height: 90dvh; overflow-y: auto; }
+.password-reset-notice { padding: 12px 14px; border: 1px solid #49616a; border-radius: 10px; background: #18303a; color: #b4ccd6; font-size: 13px; line-height: 1.8; }
+.password-reset-dialog form > label { display: grid; gap: 8px; }
+.password-reset-dialog form input { width: 100%; min-width: 0; }
+.password-reset-dialog form .muted { margin: 0; font-size: 12px; line-height: 1.7; }
 .merge-direction { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 16px; border: 1px solid #345462; border-radius: 12px; background: #142d39; }
 .merge-direction span { min-width: 0; overflow-wrap: anywhere; }
 .merge-direction small { display: block; font-size: 11px; color: #93b5c3; margin-bottom: 6px; }

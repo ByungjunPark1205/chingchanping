@@ -65,3 +65,28 @@ export async function newComplimentAlerts(req: Request) {
     hasMore: cursor < latest,
   };
 }
+
+export async function newReportAlerts(req: Request) {
+  await authorizeAlerts(req, "report-alert-reader");
+  const value = new URL(req.url).searchParams.get("after") ?? "0";
+  const after = Number(value);
+  if (!/^(0|[1-9]\d{0,15})$/.test(value) || !Number.isSafeInteger(after))
+    fail(400, "신고 알림 조회 위치를 확인해주세요.");
+  const latest = (await first<{ sequence: number }>(
+    "SELECT COALESCE(MAX(sequence),0) AS sequence FROM report_notifications",
+  ))?.sequence ?? 0;
+  if (after > latest) fail(400, "신고 알림 조회 위치를 확인해주세요.");
+  // The mail integration only receives event metadata. Report reasons,
+  // messages and identities remain behind the administrator's login.
+  const rows = await all<{ sequence: number; id: string; createdAt: number; status: string }>(
+    `SELECT n.sequence,r.id,r.created_at AS createdAt,r.status
+      FROM report_notifications n LEFT JOIN reports r ON r.id=n.report_id
+      WHERE n.sequence>? AND n.sequence<=? ORDER BY n.sequence LIMIT 100`,
+    after, latest,
+  );
+  const cursor = rows.at(-1)?.sequence ?? after;
+  return {
+    reports: rows.filter((row) => row.status === "pending").map((row) => ({ id: row.id, createdAt: row.createdAt })),
+    cursor, hasMore: cursor < latest,
+  };
+}

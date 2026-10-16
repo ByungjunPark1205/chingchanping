@@ -29,8 +29,8 @@ import {
   startOfSeoulDay,
   dateRange,
 } from "@/lib/server/service";
-import { adminMembers, previewMerge, mergeMembers, moderateMember, promoteMember } from "@/lib/server/member-admin";
-import { pendingSignupAlerts, newComplimentAlerts } from "@/lib/server/signup-alerts";
+import { adminMembers, previewMerge, mergeMembers, moderateMember, promoteMember, resetMemberPassword } from "@/lib/server/member-admin";
+import { pendingSignupAlerts, newComplimentAlerts, newReportAlerts } from "@/lib/server/signup-alerts";
 import { memberRankings } from "@/lib/server/rankings";
 export const dynamic = "force-dynamic";
 const json = (data: unknown, status = 200, cookie?: string) =>
@@ -49,6 +49,7 @@ async function get(req: Request) {
   const path = new URL(req.url).pathname.replace(/^\/api/, "");
   if (path === "/notifications/signups") return json(await pendingSignupAlerts(req));
   if (path === "/notifications/compliments") return json(await newComplimentAlerts(req));
+  if (path === "/notifications/reports") return json(await newReportAlerts(req));
   if (path === "/rankings") {
     await requireUser(req);
     return json(await memberRankings(new URL(req.url).searchParams));
@@ -132,7 +133,7 @@ async function post(req: Request) {
     return json(
       { ok: true, approvalStatus: "pending" },
       201,
-      await createSession(req, id, body.remember === true),
+      await createSession(req, id, body.remember === true, passwordHash),
     );
   }
   if (path === "/auth/login") {
@@ -172,7 +173,7 @@ async function post(req: Request) {
     return json(
       { ok: true },
       200,
-      await createSession(req, user!.id, body.remember === true),
+      await createSession(req, user!.id, body.remember === true, user!.password_hash),
     );
   }
   if (path === "/auth/logout") {
@@ -211,14 +212,15 @@ async function post(req: Request) {
       fail(400, "현재 비밀번호를 확인해주세요.");
     const hashed = await hashPassword(next);
     const tokenHash = await digest(rawToken(req));
-    await database().batch([
+    const changed = await database().batch([
       database()
-        .prepare("UPDATE users SET password_hash=? WHERE id=?")
-        .bind(hashed, user.id),
+        .prepare("UPDATE users SET password_hash=? WHERE id=? AND password_hash=? AND EXISTS(SELECT 1 FROM sessions WHERE user_id=? AND token_hash=? AND expires_at>?)")
+        .bind(hashed, user.id, user.password_hash, user.id, tokenHash, Date.now()),
       database()
-        .prepare("DELETE FROM sessions WHERE user_id=? AND token_hash<>?")
-        .bind(user.id, tokenHash),
+        .prepare("DELETE FROM sessions WHERE user_id=? AND token_hash<>? AND EXISTS(SELECT 1 FROM users WHERE id=? AND password_hash=?)")
+        .bind(user.id, tokenHash, user.id, hashed),
     ]);
+    if (!changed[0].meta.changes) fail(401, "계정 정보가 변경됐어요. 다시 로그인해주세요.");
     return json({ ok: true });
   }
   if (path === "/received/read") {
@@ -338,6 +340,18 @@ async function post(req: Request) {
   if (path === "/admin/merge") {
     const actor = await requireAdmin(req);
     await mergeMembers(actor, clean(body.sourceId, "합칠 계정", 64), clean(body.targetId, "남길 계정", 64), clean(body.sourceNickname, "합칠 닉네임", 24, 2), clean(body.targetNickname, "남길 닉네임", 24, 2));
+    return json({ ok: true });
+  }
+  if (path === "/admin/reset-password") {
+    const actor = await requireAdmin(req);
+    await rateLimit(`admin-password-reset:${actor.id}`, 5, 15 * 60000);
+    const id = clean(body.userId, "대상 회원", 64);
+    const nickname = clean(body.chatNickname, "대상 닉네임", 24, 2);
+    const current = password(body.currentPassword);
+    const next = password(body.password);
+    if (next !== password(body.confirmPassword)) fail(400, "새 비밀번호가 서로 달라요.");
+    if (!(await verifyPassword(current, actor.password_hash))) fail(400, "관리자 비밀번호를 확인해주세요.");
+    await resetMemberPassword(actor, id, nickname, next, await digest(rawToken(req)));
     return json({ ok: true });
   }
   if (path === "/admin/action") {

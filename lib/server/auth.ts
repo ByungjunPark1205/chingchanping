@@ -71,18 +71,23 @@ export async function createSession(
   req: Request,
   userId: string,
   remember: boolean,
+  passwordHash: string,
 ) {
   const token = Array.from(crypto.getRandomValues(new Uint8Array(32)))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
   const age = remember ? 30 * 86400 : 86400;
-  await run(
-    "INSERT INTO sessions (token_hash,user_id,expires_at) SELECT ?,?,? WHERE EXISTS(SELECT 1 FROM users WHERE id=? AND is_active=1 AND merged_into IS NULL)",
+  // A password reset may finish while bcrypt is checking a login request.
+  // Only issue a session for the credential version that was verified.
+  const result = await run(
+    "INSERT INTO sessions (token_hash,user_id,expires_at) SELECT ?,?,? WHERE EXISTS(SELECT 1 FROM users WHERE id=? AND password_hash=? AND is_active=1 AND merged_into IS NULL)",
     await digest(token),
     userId,
     Date.now() + age * 1000,
     userId,
+    passwordHash,
   );
+  if (!result.meta.changes) fail(401, "계정 정보가 변경됐어요. 다시 로그인해주세요.");
   return `${COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax${remember ? `; Max-Age=${age}` : ""}${new URL(req.url).protocol === "https:" ? "; Secure" : ""}`;
 }
 export function password(value: unknown): string {

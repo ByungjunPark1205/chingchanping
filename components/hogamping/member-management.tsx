@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Search, ArrowRight, Users } from "lucide-react";
+import { Search, ArrowRight, KeyRound, Users } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/client";
 import type { ManagedMember, MemberAction, MergePreview } from "@/lib/admin-types";
@@ -9,7 +9,7 @@ import { Empty } from "./common";
 
 const status = (u: ManagedMember) => u.mergedInto ? "merged" : !u.isActive ? "removed" : u.approvalStatus === "pending" ? "pending" : "active";
 const labels: Record<string, string> = { active: "활동 중", pending: "승인 대기", removed: "내보냄", merged: "합쳐짐" };
-const actionLabels = { approve: "가입 승인", remove: "내보내기", restore: "이용 복구", merge: "계정 합치기", promote: "관리자 지정" };
+const actionLabels = { approve: "가입 승인", remove: "내보내기", restore: "이용 복구", merge: "계정 합치기", promote: "관리자 지정", reset_password: "비밀번호 초기화" };
 
 export function MemberManagement({ users, actions, busy, onAction, onMerged }: {
   users: ManagedMember[];
@@ -21,6 +21,7 @@ export function MemberManagement({ users, actions, busy, onAction, onMerged }: {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [sourceId, setSourceId] = useState<string | null>(null);
+  const [resetUser, setResetUser] = useState<ManagedMember | null>(null);
   const matches = users.filter((u) => (filter === "all" || status(u) === filter) && `${u.chatNickname} ${u.lolNickname}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   return <>
     <div className="member-summary" aria-label="회원 현황">
@@ -44,6 +45,7 @@ export function MemberManagement({ users, actions, busy, onAction, onMerged }: {
           {u.isActive && u.approvalStatus === "approved" ? <button disabled={busy} className="text-button" onClick={() => onAction("promote", u)}>관리자 지정</button> : null}
           <button disabled={busy} className="secondary-button" onClick={() => onAction(u.isActive ? "deactivate" : "activate", u)}>{u.isActive ? "내보내기" : "이용 복구"}</button>
           <button disabled={busy} className="text-button" onClick={() => setSourceId(u.id)}>다른 계정에 합치기</button>
+          {!!u.isActive && <button disabled={busy} className="secondary-button" onClick={() => setResetUser(u)}><KeyRound size={14} />비밀번호 초기화</button>}
         </div>}
       </article>)}
     </div>}
@@ -55,7 +57,49 @@ export function MemberManagement({ users, actions, busy, onAction, onMerged }: {
       </li>)}</ol>}
     </section>
     {sourceId && <MergeMembers key={sourceId} users={users} sourceId={sourceId} onClose={() => setSourceId(null)} onMerged={onMerged} />}
+    {resetUser && <ResetMemberPassword key={resetUser.id} user={resetUser} onClose={() => setResetUser(null)} onReset={onMerged} />}
   </>;
+}
+
+function ResetMemberPassword({ user, onClose, onReset }: { user: ManagedMember; onClose: () => void; onReset: () => Promise<void> }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  return <Dialog open onOpenChange={(open) => { if (!open && !busy) onClose(); }}>
+    <DialogContent className="hogam-dialog password-reset-dialog" showCloseButton={!busy}>
+      <DialogTitle>회원 비밀번호 초기화</DialogTitle>
+      <DialogDescription><b>{user.chatNickname}</b>님의 새 비밀번호를 지정합니다. 완료하면 이 회원의 모든 기기에서 로그아웃돼요.</DialogDescription>
+      <p className="password-reset-notice">회원 본인의 요청인지 확인한 뒤 진행해주세요. 새 비밀번호는 회원에게 직접 전달하고, 로그인 후 설정에서 다시 변경하도록 안내해주세요.</p>
+      <form onSubmit={async (event) => {
+        event.preventDefault();
+        if (busy) return;
+        const form = event.currentTarget;
+        const fields = new FormData(form);
+        setError("");
+        const next = String(fields.get("password") ?? "");
+        if (next !== fields.get("confirmPassword")) { setError("새 비밀번호가 서로 달라요."); return; }
+        if (new TextEncoder().encode(next).length > 72) { setError("새 비밀번호는 UTF-8 기준 72바이트 이내로 입력해주세요."); return; }
+        setBusy(true);
+        try {
+          await api("/admin/reset-password", {
+            userId: user.id, chatNickname: user.chatNickname,
+            currentPassword: fields.get("currentPassword"), password: next, confirmPassword: fields.get("confirmPassword"),
+          });
+          form.reset();
+          toast.success(`${user.chatNickname}님의 비밀번호를 초기화했어요. 모든 기기에서 로그아웃됐어요.`);
+          onClose();
+          void onReset();
+        } catch (e) { setError((e as Error).message); }
+        finally { setBusy(false); }
+      }}>
+        <label>관리자 본인의 현재 비밀번호<input name="currentPassword" type="password" autoComplete="current-password" required disabled={busy} /></label>
+        <label>회원의 새 비밀번호<input name="password" type="password" autoComplete="new-password" minLength={10} maxLength={64} aria-describedby="reset-password-hint" required disabled={busy} /></label>
+        <label>회원의 새 비밀번호 확인<input name="confirmPassword" type="password" autoComplete="new-password" minLength={10} maxLength={64} required disabled={busy} /></label>
+        <p id="reset-password-hint" className="muted">10~64자, UTF-8 기준 72바이트 이내로 입력해주세요.</p>
+        {error && <p role="alert" className="form-error">{error}</p>}
+        <div className="merge-actions"><button type="button" className="secondary-button" disabled={busy} onClick={onClose}>취소</button><button type="submit" className="primary-button" disabled={busy}>{busy ? "초기화 중…" : "비밀번호 초기화"}</button></div>
+      </form>
+    </DialogContent>
+  </Dialog>;
 }
 
 function MergeMembers({ users, sourceId, onClose, onMerged }: { users: ManagedMember[]; sourceId: string; onClose: () => void; onMerged: () => Promise<void> }) {

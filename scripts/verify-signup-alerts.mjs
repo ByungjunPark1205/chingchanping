@@ -6,6 +6,7 @@ import vm from "node:vm";
 const source = readFileSync("integrations/google-apps-script/signup-alerts.gs", "utf8");
 let now = Date.now(), status = 200, pending = [], quota = 100, failSend = false, failSave = false, locked = false, lockAvailable = true;
 let complimentEvents = [], complimentStatus = 200, malformedCompliments = false;
+let reportEvents = [], reportStatus = 200, malformedReports = false;
 const properties = {}, mails = [], triggers = [];
 const props = {
   getProperty: (key) => properties[key] ?? null,
@@ -21,6 +22,14 @@ const context = vm.createContext({
     assert.equal(options.followRedirects, false);
     if (url.endsWith("/api/notifications/signups")) return { getResponseCode: () => status, getContentText: () => JSON.stringify({ pending }) };
     const parsed = new URL(url);
+    if (parsed.pathname === "/api/notifications/reports") {
+      const after = Number(parsed.searchParams.get("after"));
+      const page = reportEvents.filter((item) => item.sequence > after).slice(0, 100);
+      const cursor = page.at(-1)?.sequence ?? after;
+      const data = { reports: page.map((item) => ({ ...item, sequence: undefined })), cursor, hasMore: reportEvents.some((item) => item.sequence > cursor) };
+      if (malformedReports) data.cursor = after - 1;
+      return { getResponseCode: () => reportStatus, getContentText: () => JSON.stringify(data) };
+    }
     assert.equal(parsed.origin + parsed.pathname, "https://chingchanping.emile941205.workers.dev/api/notifications/compliments");
     const after = Number(parsed.searchParams.get("after"));
     const page = complimentEvents.filter((item) => item.sequence > after).slice(0, 100);
@@ -112,4 +121,30 @@ const batches = mails.length; poll(); assert.equal(mails.length, batches);
 advance(); poll(); assert.equal(properties.COMPLIMENT_ALERT_CURSOR, "105");
 assert.equal(mails.at(-1).subject, "[칭찬핑] 새 칭찬 1건");
 advance(); poll(); assert.equal(mails.length, batches + 1);
-console.log("PASS: signup/compliment batching, author privacy, cursor pagination, fixed recipient, duplicate prevention, retry, quotas, credential checks, trigger idempotency and lock cleanup. No real mail sent.");
+const report = (sequence) => ({ sequence, id: "report-" + sequence, createdAt: now, reason: "PRIVATE-REASON", message: "PRIVATE-MESSAGE", reporter: "PRIVATE-REPORTER", sender: "PRIVATE-AUTHOR" });
+advance(); reportEvents.push(report(1)); poll();
+assert.equal(mails.at(-1).subject, "[칭찬핑] 새 신고 1건");
+assert.ok(mails.at(-1).body.includes("신고 번호: report-1"));
+assert.ok(mails.at(-1).body.endsWith("/admin"));
+for (const forbidden of ["PRIVATE-REASON", "PRIVATE-MESSAGE", "PRIVATE-REPORTER", "PRIVATE-AUTHOR", properties.SIGNUP_ALERT_TOKEN]) assert.equal(JSON.stringify(mails.at(-1)).includes(forbidden), false);
+assert.equal(properties.REPORT_ALERT_CURSOR, "1");
+let sent = mails.length; advance(); poll(); assert.equal(mails.length, sent);
+reportEvents.push(report(2)); complimentEvents.push(compliment(106)); pending = [signup("seven")]; poll();
+assert.equal(mails.at(-1).subject, "[칭찬핑] 가입 승인 요청 1건 · 새 칭찬 1건 · 새 신고 1건");
+assert.equal(properties.REPORT_ALERT_CURSOR, "2"); assert.equal(properties.COMPLIMENT_ALERT_CURSOR, "106");
+reportEvents.push(report(3)); advance(); quota = 0; poll(); assert.equal(properties.REPORT_ALERT_CURSOR, "2");
+quota = 100; failSend = true; assert.throws(poll, /send unavailable/);
+assert.equal(properties.REPORT_ALERT_CURSOR, "2"); assert.equal(locked, false);
+failSend = false; poll(); assert.equal(properties.REPORT_ALERT_CURSOR, "3");
+advance(); reportEvents.push(report(4)); failSave = true; assert.throws(poll, /storage unavailable/);
+assert.equal(properties.REPORT_ALERT_CURSOR, "3"); failSave = false; poll(); assert.equal(properties.REPORT_ALERT_CURSOR, "4");
+advance(); reportStatus = 503; assert.throws(poll, /503/); assert.equal(properties.REPORT_ALERT_CURSOR, "4");
+reportStatus = 200; malformedReports = true; assert.throws(poll, /응답/); assert.equal(properties.REPORT_ALERT_CURSOR, "4"); malformedReports = false;
+properties.REPORT_ALERT_CURSOR = "invalid"; assert.throws(poll, /조회 위치/); properties.REPORT_ALERT_CURSOR = "4";
+for (let i = 5; i <= 105; i++) reportEvents.push(report(i));
+poll(); assert.equal(mails.at(-1).subject, "[칭찬핑] 새 신고 100건"); assert.equal(properties.REPORT_ALERT_CURSOR, "104");
+sent = mails.length; poll(); assert.equal(mails.length, sent);
+advance(); poll(); assert.equal(mails.at(-1).subject, "[칭찬핑] 새 신고 1건"); assert.equal(properties.REPORT_ALERT_CURSOR, "105");
+advance(); poll(); assert.equal(mails.length, sent + 1);
+context.installSignupAlerts(); assert.equal(triggers.length, 1);
+console.log("PASS: signup/compliment/report batching, author/report privacy, independent cursors, pagination, fixed recipient, duplicate prevention, retry, quotas, credential checks, trigger idempotency and lock cleanup. No real mail sent.");

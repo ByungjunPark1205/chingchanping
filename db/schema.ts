@@ -88,6 +88,15 @@ export const reports = sqliteTable(
     index("idx_reports_status_created").on(t.status, t.createdAt),
   ],
 );
+export const reportNotifications = sqliteTable(
+  "report_notifications",
+  {
+    sequence: integer("sequence").primaryKey({ autoIncrement: true }),
+    reportId: text("report_id").references(() => reports.id, { onDelete: "set null" }),
+  },
+  (t) => [uniqueIndex("idx_report_notifications_report").on(t.reportId)],
+);
+
 export const sessions = sqliteTable(
   "sessions",
   {

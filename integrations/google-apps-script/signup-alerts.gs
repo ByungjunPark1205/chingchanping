@@ -44,17 +44,30 @@ function fetchComplimentAlerts_(token, cursor) {
   return data;
 }
 
+function fetchReportAlerts_(token, cursor) {
+  if (!/^(0|[1-9]\d{0,15})$/.test(cursor) || !Number.isSafeInteger(Number(cursor))) throw new Error('신고 알림 조회 위치를 확인해주세요.');
+  const data = fetchAlertJson_('/api/notifications/reports?after=' + cursor, token);
+  if (!Number.isSafeInteger(data.cursor) || data.cursor < Number(cursor) || typeof data.hasMore !== 'boolean' ||
+      !Array.isArray(data.reports) || data.reports.length > 100 ||
+      ((data.hasMore || data.reports.length) && data.cursor <= Number(cursor)) ||
+      data.reports.some(function (item) {
+        return !item || typeof item.id !== 'string' || !/^[a-zA-Z0-9-]{1,64}$/.test(item.id) || !Number.isFinite(item.createdAt);
+      })) throw new Error('신고 알림 응답 형식을 확인해주세요.');
+  return data;
+}
+
 // Select this function and click Run once, then allow the Google permissions.
 function installSignupAlerts() {
   const config = signupAlertConfig_();
   fetchPendingSignups_(config.token);
   fetchComplimentAlerts_(config.token, config.properties.getProperty('COMPLIMENT_ALERT_CURSOR') || '0');
+  fetchReportAlerts_(config.token, config.properties.getProperty('REPORT_ALERT_CURSOR') || '0');
   const exists = ScriptApp.getProjectTriggers().some(function (trigger) {
     return trigger.getHandlerFunction() === 'pollSignupAlerts';
   });
   if (!exists) ScriptApp.newTrigger('pollSignupAlerts').timeBased().everyMinutes(15).create();
   pollSignupAlerts();
-  console.log('가입·칭찬 알림 연결 완료. 15분 간격으로 확인합니다.');
+  console.log('가입·칭찬·신고 알림 연결 완료. 15분 간격으로 확인합니다.');
 }
 
 function pollSignupAlerts() {
@@ -65,15 +78,16 @@ function pollSignupAlerts() {
     const saved = config.properties.getProperties();
     const pending = fetchPendingSignups_(config.token);
     const compliments = fetchComplimentAlerts_(config.token, saved.COMPLIMENT_ALERT_CURSOR || '0');
+    const reports = fetchReportAlerts_(config.token, saved.REPORT_ALERT_CURSOR || '0');
     const currentIds = new Set(pending.map(function (item) { return item.id; }));
-    // Remove old markers only after complete, valid responses from both APIs.
+    // Remove old markers only after complete, valid responses from all APIs.
     Object.keys(saved).filter(function (key) { return key.indexOf('notified:') === 0 && !currentIds.has(key.slice(9)); })
       .forEach(function (key) { config.properties.deleteProperty(key); });
     const fresh = pending.filter(function (item) { return !saved['notified:' + item.id]; }).slice(0, 500);
-    if (!fresh.length && !compliments.compliments.length) {
-      // Advance past hidden/inactive messages even when no email is needed.
-      if (String(compliments.cursor) !== saved.COMPLIMENT_ALERT_CURSOR)
-        config.properties.setProperties({ COMPLIMENT_ALERT_CURSOR: String(compliments.cursor) }, false);
+    if (!fresh.length && !compliments.compliments.length && !reports.reports.length) {
+      // Advance past hidden messages and resolved reports without sending mail.
+      if (String(compliments.cursor) !== saved.COMPLIMENT_ALERT_CURSOR || String(reports.cursor) !== saved.REPORT_ALERT_CURSOR)
+        config.properties.setProperties({ COMPLIMENT_ALERT_CURSOR: String(compliments.cursor), REPORT_ALERT_CURSOR: String(reports.cursor) }, false);
       return;
     }
     const now = Date.now();
@@ -99,7 +113,14 @@ function pollSignupAlerts() {
       subjects.push('새 칭찬 ' + compliments.compliments.length + '건');
       sections.push('새 칭찬\n\n' + lines.join('\n\n---\n\n') + '\n\n사이트에서 보기\n' + CHINGCHANPING_URL);
     }
-    // One plain-text email for both kinds; never include author or report data.
+    if (reports.reports.length) {
+      const lines = reports.reports.map(function (item) {
+        return '- 접수: ' + Utilities.formatDate(new Date(item.createdAt), 'Asia/Seoul', 'MM/dd HH:mm') + ' (신고 번호: ' + item.id + ')';
+      });
+      subjects.push('새 신고 ' + reports.reports.length + '건');
+      sections.push('새 신고 접수\n\n' + lines.join('\n') + '\n\n신고 내용은 관리자 페이지의 신고 탭에서 확인해주세요.\n' + CHINGCHANPING_URL + '/admin');
+    }
+    // One plain-text email. Report content and identities stay in the admin UI.
     MailApp.sendEmail({
       to: config.recipient,
       name: '칭찬핑 알림',
@@ -107,10 +128,10 @@ function pollSignupAlerts() {
       body: sections.join('\n\n====================\n\n'),
     });
     // Only acknowledge after delivery. Failed sends retry the same cursor.
-    const updates = { LAST_ALERT_AT: String(now), COMPLIMENT_ALERT_CURSOR: String(compliments.cursor) };
+    const updates = { LAST_ALERT_AT: String(now), COMPLIMENT_ALERT_CURSOR: String(compliments.cursor), REPORT_ALERT_CURSOR: String(reports.cursor) };
     fresh.forEach(function (item) { updates['notified:' + item.id] = '1'; });
     config.properties.setProperties(updates, false);
-    console.log('메일 알림 발송 완료: 가입 ' + fresh.length + '건, 칭찬 ' + compliments.compliments.length + '건');
+    console.log('메일 알림 발송 완료: 가입 ' + fresh.length + '건, 칭찬 ' + compliments.compliments.length + '건, 신고 ' + reports.reports.length + '건');
   } finally {
     lock.releaseLock();
   }
